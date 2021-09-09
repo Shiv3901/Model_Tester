@@ -1,10 +1,7 @@
-extensions [ csv ]
-
 globals [
   selected-car   ; the currently selected car
   lanes          ; a list of the y coordinates of different lanes
-  lanechange     ; a list of ticks recorded at the time of lane change
-  temparray      ; a temp variable used to save data in a csv
+  temp
 ]
 
 turtles-own [
@@ -12,6 +9,11 @@ turtles-own [
   top-speed     ; the maximum speed of the car (different for all cars)
   target-lane   ; the desired lane of the car
   patience      ; the driver's current level of patience
+  counter       ; keeps the counter for lane change
+  changing      ; changes values when lane is being changed for better visualisation
+  traveled      ; total distance travelled by the car
+  recorded
+  old-xcor
 ]
 
 to setup
@@ -19,18 +21,9 @@ to setup
   set-default-shape turtles "car"
   draw-road
   create-or-remove-cars
-  set lanechange []
   set selected-car one-of turtles
   ask selected-car [ set color red ]
   reset-ticks
-end
-
-to write-data-to-csv
-    csv:to-file "turtles.csv" [ (list xcor ycor size color heading) ] of turtles
-end
-
-to write-change-in-lane
-  csv:to-file "car-lane-change.csv" lanechange
 end
 
 to create-or-remove-cars
@@ -48,6 +41,9 @@ to create-or-remove-cars
     set heading 90
     set top-speed 0.5 + random-float 0.5
     set speed 0.5
+    set changing 0
+    set counter 0
+    set old-xcor -20
     set patience random max-patience
   ]
 
@@ -112,11 +108,21 @@ end
 
 to go
   create-or-remove-cars
-  ask turtles [ move-forward ]
+  ask turtles [
+    move-forward
+
+    if xcor >= old-xcor [set traveled traveled + xcor - old-xcor]
+    if old-xcor > xcor [set traveled traveled + xcor - old-xcor + 40]
+    set old-xcor xcor
+
+
+    ;set traveled traveled + old-xcor
+  ]
   ask turtles with [ patience <= 0 ] [
+    set changing 1
+    set counter counter + 1
+    set recorded traveled
     choose-new-lane
-    ; set temparray ticks
-    set lanechange insert-item 0 lanechange 9
   ]
   ask turtles with [ ycor != target-lane ] [ move-to-target-lane ]
   tick
@@ -193,6 +199,12 @@ to select-car
       display
     ]
   ]
+end
+
+to-report number-of-turns
+  set temp [counter] of selected-car
+  if temp > 100 [ report true ]
+  report false
 end
 
 to-report car-color
@@ -362,7 +374,7 @@ acceleration
 acceleration
 0.001
 0.01
-0.005
+0.002
 0.001
 1
 NIL
@@ -498,39 +510,49 @@ max-patience
 NIL
 HORIZONTAL
 
-BUTTON
-195
-645
-337
-678
-NIL
-write-data-to-csv
-NIL
+MONITOR
+1086
+148
+1144
+193
+Turns
+[counter] of selected-car
+17
 1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
+11
 
-BUTTON
+MONITOR
+1098
+224
+1164
+269
+travelled
+[recorded] of selected-car
+17
+1
+11
+
+MONITOR
+1145
+65
+1292
+110
+NIL
+[xcor] of selected-car
+17
+1
+11
+
+MONITOR
+1180
+365
+1242
 410
-655
-572
-688
-NIL
-write-change-in-lane
-NIL
+Distance
+[traveled] of selected-car
+17
 1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -944,6 +966,30 @@ NetLogo 6.2.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="acceleration_testing" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>number-of-turns</exitCondition>
+    <metric>[recorded] of selected-car</metric>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.002"/>
+      <value value="0.003"/>
+      <value value="0.005"/>
+      <value value="0.006"/>
+      <value value="0.007"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-patience">
+      <value value="50"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="40"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.02"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
