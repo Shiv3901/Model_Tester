@@ -202,6 +202,7 @@ to select-car
 end
 
 to-report number-of-turns
+  if ticks > 100000 [ report true ]
   set temp [counter] of selected-car
   if temp > 100 [ report true ]
   report false
@@ -338,7 +339,7 @@ number-of-cars
 number-of-cars
 1
 number-of-lanes * world-width
-40.0
+20.0
 1
 1
 NIL
@@ -374,7 +375,7 @@ acceleration
 acceleration
 0.001
 0.01
-0.002
+0.006
 0.001
 1
 NIL
@@ -389,7 +390,7 @@ deceleration
 deceleration
 0.01
 0.1
-0.02
+0.05
 0.01
 1
 NIL
@@ -504,7 +505,7 @@ max-patience
 max-patience
 1
 100
-50.0
+30.0
 1
 1
 NIL
@@ -550,6 +551,17 @@ MONITOR
 410
 Distance
 [traveled] of selected-car
+17
+1
+11
+
+MONITOR
+1120
+315
+1177
+360
+NIL
+ticks
 17
 1
 11
@@ -967,7 +979,7 @@ NetLogo 6.2.0
 @#$#@#$#@
 @#$#@#$#@
 <experiments>
-  <experiment name="acceleration_testing" repetitions="1" runMetricsEveryStep="true">
+  <experiment name="acceleration_testing" repetitions="2" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <exitCondition>number-of-turns</exitCondition>
@@ -987,6 +999,89 @@ NetLogo 6.2.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="deceleration">
       <value value="0.02"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="max_patience_testing" repetitions="2" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>number-of-turns</exitCondition>
+    <metric>[recorded] of selected-car</metric>
+    <enumeratedValueSet variable="max-patience">
+      <value value="30"/>
+      <value value="40"/>
+      <value value="50"/>
+      <value value="60"/>
+      <value value="70"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.006"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="40"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.02"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="number_of_cars_testing" repetitions="2" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>number-of-turns</exitCondition>
+    <metric>[recorded] of selected-car</metric>
+    <enumeratedValueSet variable="max-patience">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.006"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="20"/>
+      <value value="30"/>
+      <value value="40"/>
+      <value value="50"/>
+      <value value="60"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.02"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="deceleration_testing" repetitions="2" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>number-of-turns</exitCondition>
+    <metric>[recorded] of selected-car</metric>
+    <enumeratedValueSet variable="max-patience">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.006"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.01"/>
+      <value value="0.02"/>
+      <value value="0.03"/>
+      <value value="0.04"/>
+      <value value="0.05"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>count turtles</metric>
+    <enumeratedValueSet variable="max-patience">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.006"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.05"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
