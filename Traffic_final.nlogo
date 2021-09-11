@@ -339,7 +339,7 @@ number-of-cars
 number-of-cars
 1
 number-of-lanes * world-width
-40.0
+20.0
 1
 1
 NIL
@@ -390,7 +390,7 @@ deceleration
 deceleration
 0.01
 0.1
-0.02
+0.05
 0.01
 1
 NIL
@@ -505,7 +505,7 @@ max-patience
 max-patience
 1
 100
-50.0
+30.0
 1
 1
 NIL
@@ -523,21 +523,21 @@ Turns
 11
 
 MONITOR
-1098
-224
-1164
-269
-travelled
+1070
+20
+1132
+65
+Turned 
 [recorded] of selected-car
 17
 1
 11
 
 MONITOR
-1145
-65
-1292
-110
+1105
+250
+1252
+295
 NIL
 [xcor] of selected-car
 17
@@ -545,10 +545,10 @@ NIL
 11
 
 MONITOR
-1180
-365
-1242
-410
+1145
+20
+1207
+65
 Distance
 [traveled] of selected-car
 17
@@ -1004,7 +1004,8 @@ NetLogo 6.2.0
   <experiment name="max_patience_testing" repetitions="2" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
-    <metric>count turtles</metric>
+    <exitCondition>number-of-turns</exitCondition>
+    <metric>[recorded] of selected-car</metric>
     <enumeratedValueSet variable="max-patience">
       <value value="30"/>
       <value value="40"/>
@@ -1020,6 +1021,67 @@ NetLogo 6.2.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="deceleration">
       <value value="0.02"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="number_of_cars_testing" repetitions="2" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>number-of-turns</exitCondition>
+    <metric>[recorded] of selected-car</metric>
+    <enumeratedValueSet variable="max-patience">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.006"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="20"/>
+      <value value="30"/>
+      <value value="40"/>
+      <value value="50"/>
+      <value value="60"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.02"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="deceleration_testing" repetitions="2" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>number-of-turns</exitCondition>
+    <metric>[recorded] of selected-car</metric>
+    <enumeratedValueSet variable="max-patience">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.006"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.01"/>
+      <value value="0.02"/>
+      <value value="0.03"/>
+      <value value="0.04"/>
+      <value value="0.05"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <metric>count turtles</metric>
+    <enumeratedValueSet variable="max-patience">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.006"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="20"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.05"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
