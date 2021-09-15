@@ -54,6 +54,12 @@ to create-or-remove-cars
 
 end
 
+to create-traffic-block
+
+
+
+end
+
 to-report free [ road-patches ] ; turtle procedure
   let this-car self
   report road-patches with [
