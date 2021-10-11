@@ -1,11 +1,7 @@
 globals [
   selected-car   ; the currently selected car
   lanes          ; a list of the y coordinates of different lanes
-  temp
-  phase             ;; not sure what this is right now
-  num-cars-stopped  ;; could be the variable that decides changing the car lights
-  current-light     ;; the current light in the crossing (my guess for now)
-  broken-car
+  broken-car     ; a single car that's broken down blocking a lane
 ]
 
 turtles-own [
@@ -13,19 +9,6 @@ turtles-own [
   top-speed     ; the maximum speed of the car (different for all cars)
   target-lane   ; the desired lane of the car
   patience      ; the driver's current level of patience
-
-  ; extras added by me
-  lanes-changed       ; keeps the counter for lane change
-  changing      ; changes values when lane is being changed for better visualisation
-  distance-travelled      ; total distance travelled by the car
-  old-xcor      ; to have the previous coordinate to calculate distance in every tick
-
-]
-
-patches-own [
-
-  crash         ; variable to check if a crash occured here
-
 ]
 
 to setup
@@ -36,7 +19,7 @@ to setup
   set selected-car one-of turtles
   set broken-car one-of turtles
   ask selected-car [ set color red ]
-  ask broken-car [ set color black ]
+  ask broken-car [set color orange ]
   reset-ticks
 end
 
@@ -56,12 +39,6 @@ to create-or-remove-cars
     set top-speed 0.5 + random-float 0.5
     set speed 0.5
     set patience random max-patience
-
-    ; code added by me
-    set changing 0
-    set lanes-changed 0
-    set old-xcor -20
-
   ]
 
   if count turtles > number-of-cars [
@@ -82,10 +59,10 @@ to draw-road
   ask patches [
     ; the road is surrounded by green grass of varying shades
     set pcolor green - random-float 0.5
-    set crash 0  ; added by me
   ]
-  set lanes n-values number-of-lanes [ n -> number-of-lanes - (n * 2) - 1 ]
-
+  set lanes n-values number-of-lanes [ [n] ->
+    number-of-lanes - (n * 2) - 1
+  ]
   ask patches with [ abs pycor <= number-of-lanes ] [
     ; the road itself is varying shades of grey
     set pcolor grey - 2.5 + random-float 0.25
@@ -127,116 +104,40 @@ end
 
 to go
   create-or-remove-cars
-
   ask [ other turtles ] of broken-car [ move-forward ]
   ask broken-car [break-down-car]
-
-  ask turtles with [ patience <= 0] [
-    set changing 1
-    set lanes-changed lanes-changed + 1
-    ; set crash random-float 0.9
-    ; set recorded traveled
-    choose-new-lane
-  ]
-
+  ask turtles with [ patience <= 0 ] [ choose-new-lane ]
   ask turtles with [ ycor != target-lane ] [ move-to-target-lane ]
-
   tick
-
-  if ticks mod 500 = 0 [
-
+  if ticks mod 250 = 0 [
     ask broken-car [ set color blue ]
     set broken-car one-of turtles
-    ask broken-car [ set color black ]
+    ask broken-car [ set color orange ]
     ask broken-car [ break-down-car ]
-
   ]
-
-  ask turtles [
-    ; move-forward
-
-    ;if (crash = 1) [
-     ; set patience -1
-    ;]
-
-    if xcor >= old-xcor [set distance-travelled distance-travelled + xcor - old-xcor]
-    if old-xcor > xcor [set distance-travelled distance-travelled + xcor - old-xcor + 40]
-    set old-xcor xcor
-
-    ;if ticks > 100 [set crash 1000]
-
-    ;set traveled traveled + old-xcor
-  ]
-
-
-
-  ;ask turtles with [crash = 1] [
-  ;  choose-new-lane
-  ;  stop-car
-  ;]
-
-
-
-  ; tick
-
-  ;if (ticks mod 10 = 0) [
-
-    ;ask patch 2 1 [
-     ; set crash 1
-   ; ]
-
-   ; ask patch 3 1 [
-   ;   set pcolor yellow - 2.5 + random-float 0.25
-   ; ]
-
- ; ]
-
-  ;if (ticks mod 1000 = 30) [
-
-    ;ask patch 2 1 [
-
-   ;   set pcolor grey - 2.5 + random-float 0.25
-  ;    set crash 0
-  ;
-  ;  ]
-
- ; ]
-
-
-
-  ;ask patches with [pycor = 1 and not any? turtles-here] [
-
-   ;set pcolor red
-
-  ;]
-
-  ;ask patches with [pycor = 1 and any? turtles-here] [
-
-   ; set pcolor gray
-
-  ;]
 end
 
 to move-forward ; turtle procedure
   set heading 90
-
-  speed-up-car
-
-  ; speed-up-car ; we tentatively speed up, but might have to slow down
+  speed-up-car ; we tentatively speed up, but might have to slow down
   let blocking-cars other turtles in-cone (1 + speed) 45 with [ y-distance <= 1 ]
   let blocking-car min-one-of blocking-cars [ distance myself ]
   if blocking-car != nobody [
     ; match the speed of the car ahead of you and then slow
     ; down so you are driving a bit slower than that car.
     set speed [ speed ] of blocking-car
-
-    if blocking-car = broken-car [ set speed 0 ]
-    if speed > 0 [ slow-down-car ]
-    if speed = 0 [ set patience -1 ]
+    if blocking-car = broken-car [
+      set speed 0
+    ]
+    if speed > 0 [
+      slow-down-car
+    ]
+    if speed = 0 [
+      set patience -1
+    ]
   ]
 
   forward speed
-
 end
 
 to break-down-car ; turtle procedure
@@ -245,9 +146,7 @@ end
 
 to slow-down-car ; turtle procedure
   set speed (speed - deceleration)
-  if speed < 0 [
-    set speed deceleration
-  ]
+  if speed < 0 [ set speed deceleration ]
   ; every time you hit the brakes, you loose a little patience
   set patience patience - 1
 end
@@ -262,18 +161,18 @@ to choose-new-lane ; turtle procedure
   ; distance to your current lane (i.e., your ycor).
   let other-lanes remove ycor lanes
   if not empty? other-lanes [
-    let min-dist min map [ y -> abs (y - ycor) ] other-lanes
-    let closest-lanes filter [ y -> abs (y - ycor) = min-dist ] other-lanes
+    let min-dist min map [ [y] -> abs (y - ycor) ] other-lanes
+    let closest-lanes filter [ [y] -> abs (y - ycor) = min-dist ] other-lanes
     set target-lane one-of closest-lanes
     set patience max-patience
   ]
 end
 
 to move-to-target-lane ; turtle procedure
-  set heading ifelse-value target-lane < ycor [ 180 ] [ 0 ]
+  set heading ifelse-value (target-lane < ycor) [ 180 ] [ 0 ]
   let blocking-cars other turtles in-cone (1 + abs (ycor - target-lane)) 180 with [ x-distance <= 1 ]
   let blocking-car min-one-of blocking-cars [ distance myself ]
-  ifelse (blocking-car = nobody) [
+  ifelse blocking-car = nobody [
     forward 0.2
     set ycor precision ycor 1 ; to avoid floating point errors
   ] [
@@ -304,24 +203,12 @@ to select-car
   ]
 end
 
-to-report number-of-turns
-  if ticks > 100000 [ report true ]
-  set temp [lanes-changed] of selected-car
-  if temp > 100 [ report true ]
-  report false
-end
-
 to-report car-color
   ; give all cars a blueish color, but still make them distinguishable
   report one-of [ blue cyan sky ] + 1.5 + random-float 1.0
 end
 
-to-report number-of-lanes
-  ; To make the number of lanes easily adjustable, remove this
-  ; reporter and create a slider on the interface with the same
-  ; name. 8 lanes is the maximum that currently fit in the view.
-  report 2
-end
+
 
 
 ; Copyright 1998 Uri Wilensky.
@@ -330,11 +217,11 @@ end
 GRAPHICS-WINDOW
 225
 10
-1053
-359
+1164
+405
 -1
 -1
-20.0
+22.71
 1
 10
 1
@@ -407,9 +294,9 @@ NIL
 
 BUTTON
 10
-190
+225
 215
-223
+258
 select car
 select-car
 T
@@ -424,9 +311,9 @@ NIL
 
 MONITOR
 130
-335
+370
 215
-380
+415
 mean speed
 mean [speed] of turtles
 2
@@ -435,24 +322,24 @@ mean [speed] of turtles
 
 SLIDER
 10
-50
+85
 215
-83
+118
 number-of-cars
 number-of-cars
 1
 number-of-lanes * world-width
-20.0
+36.0
 1
 1
 NIL
 HORIZONTAL
 
 PLOT
-305
-385
-675
-560
+300
+420
+670
+595
 Car Speeds
 Time
 Speed
@@ -471,14 +358,14 @@ PENS
 
 SLIDER
 10
-85
+120
 215
-118
+153
 acceleration
 acceleration
 0.001
 0.01
-0.006
+0.002
 0.001
 1
 NIL
@@ -486,24 +373,24 @@ HORIZONTAL
 
 SLIDER
 10
-120
+155
 215
-153
+188
 deceleration
 deceleration
 0.01
 0.1
-0.05
+0.02
 0.01
 1
 NIL
 HORIZONTAL
 
 PLOT
-685
-385
-1055
-560
+680
+420
+1050
+595
 Driver Patience
 Time
 Patience
@@ -522,28 +409,11 @@ PENS
 
 BUTTON
 10
-225
-215
-258
-follow selected car
-follow selected-car
-NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-0
-
-BUTTON
-10
 260
 215
 293
-watch selected car
-watch selected-car
+follow selected car
+follow selected-car
 NIL
 1
 T
@@ -559,6 +429,23 @@ BUTTON
 295
 215
 328
+watch selected car
+watch selected-car
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+0
+
+BUTTON
+10
+330
+215
+363
 reset perspective
 reset-perspective
 NIL
@@ -573,9 +460,9 @@ NIL
 
 MONITOR
 10
-335
+370
 130
-380
+415
 selected car speed
 [ speed ] of selected-car
 2
@@ -583,10 +470,10 @@ selected car speed
 11
 
 PLOT
-10
-386
-300
-561
+5
+421
+295
+596
 Cars Per Lane
 Time
 Cars
@@ -596,14 +483,14 @@ Cars
 0.0
 true
 true
-"set-plot-y-range (floor (count turtles * 0.4)) (ceiling (count turtles * 0.6))\nforeach range length lanes [ i ->\n  create-temporary-plot-pen (word (i + 1))\n  set-plot-pen-color item i base-colors\n]" "foreach range length lanes [ i ->\n  set-current-plot-pen (word (i + 1))\n  plot count turtles with [ round ycor = item i lanes ]\n]"
+"set-plot-y-range (floor (count turtles * 0.4)) (ceiling (count turtles * 0.6))\nforeach n-values length lanes [ [i] -> i ] [ [i] ->\n  create-temporary-plot-pen (word (i + 1))\n  set-plot-pen-color item i base-colors\n]" "foreach n-values length lanes [ [i] -> i ] [ [i] ->\n  set-current-plot-pen (word (i + 1))\n  plot count turtles with [ round ycor = item i lanes ]\n]"
 PENS
 
 SLIDER
 10
-155
+190
 215
-188
+223
 max-patience
 max-patience
 1
@@ -614,67 +501,35 @@ max-patience
 NIL
 HORIZONTAL
 
-MONITOR
-1063
-64
-1122
-109
-Turns
-[lanes-changed] of selected-car
-17
-1
-11
-
-MONITOR
-1063
+SLIDER
 10
-1188
-55
-Distance Travelled
-[distance-travelled] of selected-car
-17
+50
+215
+83
+number-of-lanes
+number-of-lanes
+2
+8
+8.0
 1
-11
-
-MONITOR
-1063
-117
-1120
-162
+1
 NIL
-ticks
-17
-1
-11
-
-MONITOR
-1085
-220
-1141
-265
-crash
-[crash] of patch 2 1
-17
-1
-11
-
-MONITOR
-1116
-285
-1180
-330
-patience
-[patience] of selected-car
-17
-1
-11
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
 
-This model is a more sophisticated two-lane version of the "Traffic Basic" model.  Much like the simpler model, this model demonstrates how traffic jams can form. In the two-lane version, drivers have a new option; they can react by changing lanes, although this often does little to solve their problem.
+This model demonstrates how traffic jams can form, and adds the variable of a broken down car. At random a car breaks down and blocks the lane for some time, but starts back up again at which point another car breaks down somewhere else.
 
-As in the Traffic Basic model, traffic may slow down and jam without any centralized cause.
+As in the Traffic Basic model, traffic may slow down and jam without any centralized cause. Drivers can react by changing lanes, although this often does little to solve their problem. 
+
+##REFLECTION
+
+The change we made to this model was to add a slider to allow the user to change the number of lanes on the model. While this is not a change to the agent, it nicely shows that even if we have more lanes a traffic jam will still occur. 
+
+The agent-based change in this model is a car breaking down randomly during the traffic jam. The car that breaks down is colored orange until it is repaired and then it turns blue again and blends in with the rest of the traffic flow. The same rules that apply to traffic apply to the broken down car: if a car comes up behind a broken down car, it should move into another lane to go around it. Yet, with this added layer the traffic conditions worsen. This is a meaningful intervention as this event is also observable in everyday life.
+
+From exploring the models we learned how small changes to the code can have a big impact on the larger system. For example, if you add a semi-colon to the slow down car command, you will resolve the traffic jam because the cars have adaptive cruise control. In this case, one character completely changes the nature of the agents in the complex system.
 
 ## HOW TO USE IT
 
@@ -1077,117 +932,10 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.2.0
+NetLogo 6.0-BETA1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
-<experiments>
-  <experiment name="acceleration_testing" repetitions="2" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <exitCondition>number-of-turns</exitCondition>
-    <metric>[recorded] of selected-car</metric>
-    <enumeratedValueSet variable="acceleration">
-      <value value="0.002"/>
-      <value value="0.003"/>
-      <value value="0.005"/>
-      <value value="0.006"/>
-      <value value="0.007"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="max-patience">
-      <value value="50"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-cars">
-      <value value="40"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="deceleration">
-      <value value="0.02"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="max_patience_testing" repetitions="2" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <exitCondition>number-of-turns</exitCondition>
-    <metric>[recorded] of selected-car</metric>
-    <enumeratedValueSet variable="max-patience">
-      <value value="30"/>
-      <value value="40"/>
-      <value value="50"/>
-      <value value="60"/>
-      <value value="70"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="acceleration">
-      <value value="0.006"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-cars">
-      <value value="40"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="deceleration">
-      <value value="0.02"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="number_of_cars_testing" repetitions="2" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <exitCondition>number-of-turns</exitCondition>
-    <metric>[recorded] of selected-car</metric>
-    <enumeratedValueSet variable="max-patience">
-      <value value="30"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="acceleration">
-      <value value="0.006"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-cars">
-      <value value="20"/>
-      <value value="30"/>
-      <value value="40"/>
-      <value value="50"/>
-      <value value="60"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="deceleration">
-      <value value="0.02"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="deceleration_testing" repetitions="2" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <exitCondition>number-of-turns</exitCondition>
-    <metric>[recorded] of selected-car</metric>
-    <enumeratedValueSet variable="max-patience">
-      <value value="30"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="acceleration">
-      <value value="0.006"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-cars">
-      <value value="20"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="deceleration">
-      <value value="0.01"/>
-      <value value="0.02"/>
-      <value value="0.03"/>
-      <value value="0.04"/>
-      <value value="0.05"/>
-    </enumeratedValueSet>
-  </experiment>
-  <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
-    <setup>setup</setup>
-    <go>go</go>
-    <metric>count turtles</metric>
-    <enumeratedValueSet variable="max-patience">
-      <value value="30"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="acceleration">
-      <value value="0.006"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="number-of-cars">
-      <value value="20"/>
-    </enumeratedValueSet>
-    <enumeratedValueSet variable="deceleration">
-      <value value="0.05"/>
-    </enumeratedValueSet>
-  </experiment>
-</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default

@@ -1,11 +1,8 @@
 globals [
   selected-car   ; the currently selected car
   lanes          ; a list of the y coordinates of different lanes
-  temp
-  phase             ;; not sure what this is right now
-  num-cars-stopped  ;; could be the variable that decides changing the car lights
-  current-light     ;; the current light in the crossing (my guess for now)
-  broken-car
+  broken-car     ; the currently selected broken-car
+  temp           ; the variable to count the number of turns
 ]
 
 turtles-own [
@@ -14,18 +11,11 @@ turtles-own [
   target-lane   ; the desired lane of the car
   patience      ; the driver's current level of patience
 
-  ; extras added by me
-  lanes-changed       ; keeps the counter for lane change
+  counter       ; keeps the counter for lane change
   changing      ; changes values when lane is being changed for better visualisation
-  distance-travelled      ; total distance travelled by the car
-  old-xcor      ; to have the previous coordinate to calculate distance in every tick
-
-]
-
-patches-own [
-
-  crash         ; variable to check if a crash occured here
-
+  traveled      ; total distance travelled by the car
+  recorded
+  old-xcor
 ]
 
 to setup
@@ -36,7 +26,7 @@ to setup
   set selected-car one-of turtles
   set broken-car one-of turtles
   ask selected-car [ set color red ]
-  ask broken-car [ set color black ]
+  ask broken-car [set color gray ]
   reset-ticks
 end
 
@@ -55,13 +45,10 @@ to create-or-remove-cars
     set heading 90
     set top-speed 0.5 + random-float 0.5
     set speed 0.5
-    set patience random max-patience
-
-    ; code added by me
     set changing 0
-    set lanes-changed 0
+    set counter 0
     set old-xcor -20
-
+    set patience random max-patience
   ]
 
   if count turtles > number-of-cars [
@@ -82,10 +69,8 @@ to draw-road
   ask patches [
     ; the road is surrounded by green grass of varying shades
     set pcolor green - random-float 0.5
-    set crash 0  ; added by me
   ]
   set lanes n-values number-of-lanes [ n -> number-of-lanes - (n * 2) - 1 ]
-
   ask patches with [ abs pycor <= number-of-lanes ] [
     ; the road itself is varying shades of grey
     set pcolor grey - 2.5 + random-float 0.25
@@ -127,102 +112,37 @@ end
 
 to go
   create-or-remove-cars
+  ask [ other turtles ] of broken-car [
+    move-forward
 
-  ask [ other turtles ] of broken-car [ move-forward ]
+    if xcor >= old-xcor [set traveled traveled + xcor - old-xcor]
+    if old-xcor > xcor [set traveled traveled + xcor - old-xcor + 40]
+    set old-xcor xcor
+
+  ]
   ask broken-car [break-down-car]
-
-  ask turtles with [ patience <= 0] [
+  ask turtles with [ patience <= 0 ] [
     set changing 1
-    set lanes-changed lanes-changed + 1
-    ; set crash random-float 0.9
-    ; set recorded traveled
+    set counter counter + 1
+    set recorded traveled
     choose-new-lane
   ]
-
   ask turtles with [ ycor != target-lane ] [ move-to-target-lane ]
 
   tick
 
-  if ticks mod 500 = 0 [
-
-    ask broken-car [ set color blue ]
+  if ticks mod 90 = 0 [
+    ask broken-car [ set color car-color ]
     set broken-car one-of turtles
-    ask broken-car [ set color black ]
+    ask broken-car [ set color gray ]
     ask broken-car [ break-down-car ]
-
   ]
 
-  ask turtles [
-    ; move-forward
-
-    ;if (crash = 1) [
-     ; set patience -1
-    ;]
-
-    if xcor >= old-xcor [set distance-travelled distance-travelled + xcor - old-xcor]
-    if old-xcor > xcor [set distance-travelled distance-travelled + xcor - old-xcor + 40]
-    set old-xcor xcor
-
-    ;if ticks > 100 [set crash 1000]
-
-    ;set traveled traveled + old-xcor
-  ]
-
-
-
-  ;ask turtles with [crash = 1] [
-  ;  choose-new-lane
-  ;  stop-car
-  ;]
-
-
-
-  ; tick
-
-  ;if (ticks mod 10 = 0) [
-
-    ;ask patch 2 1 [
-     ; set crash 1
-   ; ]
-
-   ; ask patch 3 1 [
-   ;   set pcolor yellow - 2.5 + random-float 0.25
-   ; ]
-
- ; ]
-
-  ;if (ticks mod 1000 = 30) [
-
-    ;ask patch 2 1 [
-
-   ;   set pcolor grey - 2.5 + random-float 0.25
-  ;    set crash 0
-  ;
-  ;  ]
-
- ; ]
-
-
-
-  ;ask patches with [pycor = 1 and not any? turtles-here] [
-
-   ;set pcolor red
-
-  ;]
-
-  ;ask patches with [pycor = 1 and any? turtles-here] [
-
-   ; set pcolor gray
-
-  ;]
 end
 
 to move-forward ; turtle procedure
   set heading 90
-
-  speed-up-car
-
-  ; speed-up-car ; we tentatively speed up, but might have to slow down
+  speed-up-car ; we tentatively speed up, but might have to slow down
   let blocking-cars other turtles in-cone (1 + speed) 45 with [ y-distance <= 1 ]
   let blocking-car min-one-of blocking-cars [ distance myself ]
   if blocking-car != nobody [
@@ -233,10 +153,9 @@ to move-forward ; turtle procedure
     if blocking-car = broken-car [ set speed 0 ]
     if speed > 0 [ slow-down-car ]
     if speed = 0 [ set patience -1 ]
+
   ]
-
   forward speed
-
 end
 
 to break-down-car ; turtle procedure
@@ -245,9 +164,7 @@ end
 
 to slow-down-car ; turtle procedure
   set speed (speed - deceleration)
-  if speed < 0 [
-    set speed deceleration
-  ]
+  if speed < 0 [ set speed deceleration ]
   ; every time you hit the brakes, you loose a little patience
   set patience patience - 1
 end
@@ -273,7 +190,7 @@ to move-to-target-lane ; turtle procedure
   set heading ifelse-value target-lane < ycor [ 180 ] [ 0 ]
   let blocking-cars other turtles in-cone (1 + abs (ycor - target-lane)) 180 with [ x-distance <= 1 ]
   let blocking-car min-one-of blocking-cars [ distance myself ]
-  ifelse (blocking-car = nobody) [
+  ifelse blocking-car = nobody [
     forward 0.2
     set ycor precision ycor 1 ; to avoid floating point errors
   ] [
@@ -305,8 +222,8 @@ to select-car
 end
 
 to-report number-of-turns
-  if ticks > 100000 [ report true ]
-  set temp [lanes-changed] of selected-car
+  ; if ticks > 100000 [ report true ]
+  set temp [counter] of selected-car
   if temp > 100 [ report true ]
   report false
 end
@@ -320,7 +237,7 @@ to-report number-of-lanes
   ; To make the number of lanes easily adjustable, remove this
   ; reporter and create a slider on the interface with the same
   ; name. 8 lanes is the maximum that currently fit in the view.
-  report 2
+  report 4
 end
 
 
@@ -330,8 +247,8 @@ end
 GRAPHICS-WINDOW
 225
 10
-1053
-359
+1253
+319
 -1
 -1
 20.0
@@ -344,10 +261,10 @@ GRAPHICS-WINDOW
 1
 0
 1
--20
-20
--8
-8
+-25
+25
+-7
+7
 1
 1
 1
@@ -442,17 +359,17 @@ number-of-cars
 number-of-cars
 1
 number-of-lanes * world-width
-20.0
+56.0
 1
 1
 NIL
 HORIZONTAL
 
 PLOT
-305
-385
-675
-560
+521
+328
+891
+503
 Car Speeds
 Time
 Speed
@@ -500,10 +417,10 @@ NIL
 HORIZONTAL
 
 PLOT
-685
-385
-1055
-560
+901
+328
+1271
+503
 Driver Patience
 Time
 Patience
@@ -583,10 +500,10 @@ selected car speed
 11
 
 PLOT
-10
-386
-300
-561
+226
+329
+516
+504
 Cars Per Lane
 Time
 Cars
@@ -615,56 +532,56 @@ NIL
 HORIZONTAL
 
 MONITOR
-1063
-64
-1122
-109
+1263
+66
+1321
+111
 Turns
-[lanes-changed] of selected-car
+[counter] of selected-car
 17
 1
 11
 
 MONITOR
-1063
+1263
 10
-1188
+1325
 55
-Distance Travelled
-[distance-travelled] of selected-car
+Turned 
+[recorded] of selected-car
 17
 1
 11
 
 MONITOR
-1063
-117
-1120
-162
+1263
+121
+1410
+166
+NIL
+[xcor] of selected-car
+17
+1
+11
+
+MONITOR
+1339
+10
+1401
+55
+Distance
+[traveled] of selected-car
+17
+1
+11
+
+MONITOR
+1340
+67
+1397
+112
 NIL
 ticks
-17
-1
-11
-
-MONITOR
-1085
-220
-1141
-265
-crash
-[crash] of patch 2 1
-17
-1
-11
-
-MONITOR
-1116
-285
-1180
-330
-patience
-[patience] of selected-car
 17
 1
 11
