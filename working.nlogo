@@ -451,7 +451,7 @@ number-of-cars
 number-of-cars
 1
 number-of-lanes * world-width
-35.0
+40.0
 1
 1
 NIL
@@ -502,7 +502,7 @@ deceleration
 deceleration
 0.01
 0.1
-0.05
+0.03
 0.01
 1
 NIL
@@ -1195,7 +1195,7 @@ NetLogo 6.2.0
       <value value="0.006"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="number-of-cars">
-      <value value="20"/>
+      <value value="40"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="deceleration">
       <value value="0.03"/>
