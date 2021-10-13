@@ -1,14 +1,8 @@
-extensions [array]
-
 globals [
   selected-car   ; the currently selected car
   lanes          ; a list of the y coordinates of different lanes
   broken-car     ; the currently selected broken-car
-  temp           ; the variable to count the number of turns
-
-  ci ; trash trial
-
-  ; decision      ; which model to chose from to change the lane
+  temp           ; the variable to count the number of lane-changes
 ]
 
 turtles-own [
@@ -18,15 +12,14 @@ turtles-own [
   patience      ; the driver's current level of patience
 
   counter       ; keeps the counter for lane change
-  changing      ; changes values when lane is being changed for better visualisation
   traveled      ; total distance travelled by the car
   recorded
-  old-xcor
 
-  turned        ; variable to make sure that only valid turns are calculated
-  distance-in-lanes ; array that stores the distance covered whi
+  changing-lanes        ; variable to make sure that only valid lane-changes are calculated
+  distance-in-lanes     ; array that stores the distance covered in that lane
+
+  old-xcor      ; variable to keep track of the distance travelled
   old-ycor      ; variable to keep track of the last road that the car drove on
-
 ]
 
 to setup
@@ -34,9 +27,8 @@ to setup
   set-default-shape turtles "car"
   draw-road
   create-or-remove-cars
-  ; set decision 2
   set selected-car one-of turtles
-  set broken-car one-of turtles
+  set broken-car one-of turtles        ; randomly select a car and break it down to mimic traffic
   ask selected-car [ set color red ]
   ask broken-car [set color gray ]
   reset-ticks
@@ -50,6 +42,7 @@ to create-or-remove-cars
     set number-of-cars count road-patches
   ]
 
+  ; initialize all the variables for individual cars
   create-turtles (number-of-cars - count turtles) [
     set color car-color
     move-to one-of free road-patches
@@ -58,7 +51,6 @@ to create-or-remove-cars
     set heading 90
     set top-speed 0.5 + random-float 0.5
     set speed 0.5
-    set changing 0
     set counter 0
     set old-xcor -20
     set old-ycor pycor
@@ -124,48 +116,58 @@ to draw-line [ y line-color gap ]
   ]
 end
 
+
+; every tick
 to go
+
   create-or-remove-cars
+
   ask [ other turtles ] of broken-car [
+
     move-forward
+
+    ; code to calculate the distance travelled from the last time it was calculated
     let dist 0
     if xcor >= old-xcor [ set dist xcor - old-xcor ]
     if old-xcor > xcor [ set dist xcor - old-xcor + 40 ]
     set old-xcor xcor
-
-    let lane-loc position ycor lanes
-
-    if (is-number? lane-loc) [
-
-      let temp-dist item lane-loc distance-in-lanes
-      set distance-in-lanes replace-item lane-loc distance-in-lanes (temp-dist + dist)
-
-    ]
-
     set traveled traveled + dist
 
+    ; code to update the distance travelled in the corresponding lane
+    let lane-loc position ycor lanes
+    if (is-number? lane-loc) [
+      let temp-dist item lane-loc distance-in-lanes
+      set distance-in-lanes replace-item lane-loc distance-in-lanes (temp-dist + dist)
+    ]
+
   ]
-  ask broken-car [ break-down-car ]
+
+  ask broken-car [
+    break-down-car
+  ]
+
+  ; change lane for a car with patience less than 0
   ask turtles with [ patience <= 0 ] [
-    set changing 1
-    ; set counter counter + 1
     set recorded traveled
     choose-new-lane
-    set turned false
+    set changing-lanes true    ; set it true, so it stops counting for lane-change until reached
   ]
-  ask turtles with [ ycor != target-lane and turned = false] [
+
+  ; turtles moving to target lanes are instructed to call move-to-target-lane
+  ask turtles with [ ycor != target-lane and changing-lanes = true] [
     move-to-target-lane
   ]
 
-  ask turtles with [ ycor = target-lane and turned = false] [
+  ; function that counts the lane change the first time it reached the target lane
+  ask turtles with [ ycor = target-lane and changing-lanes = true] [
     set counter counter + 1
-    set turned true
-    set old-ycor target-lane
+    set changing-lanes false    ; this makes sure that its only counted once
+    set old-ycor target-lane    ; useful for 4th decision
   ]
 
-  set ci count turtles with [ycor = -1]
   tick
 
+  ; procedure to pick a car to break down to mimic traffic
   if ticks mod 90 = 0 [
     ask broken-car [ set color car-color ]
     ask selected-car [ set color red ]
@@ -181,6 +183,8 @@ to move-forward ; turtle procedure
   speed-up-car ; we tentatively speed up, but might have to slow down
   let blocking-cars other turtles in-cone (1 + speed) 45 with [ y-distance <= 1 ]
   let blocking-car min-one-of blocking-cars [ distance myself ]
+
+  ; if there is a car blocking your way
   if blocking-car != nobody [
     ; match the speed of the car ahead of you and then slow
     ; down so you are driving a bit slower than that car.
@@ -188,9 +192,10 @@ to move-forward ; turtle procedure
 
     if blocking-car = broken-car [ set speed 0 ]
     if speed > 0 [ slow-down-car ]
-    if speed = 0 [ set patience -1 ]
+    if speed = 0 [ set patience -1 ]   ; doing this to make sure that the car choses a new lane
 
   ]
+
   forward speed
 end
 
@@ -213,45 +218,58 @@ end
 ; decision 1 is to choose the new lane that is the nearest to the one that you are on
 ; decision 2 is to choose the lane that has the minimum number of cars on it atm
 ; decision 3 is to choose the lane that you got to travel the most in other than yours
-; decision 4 could be a variation to 2 which compares to how many are behind and ahead in
-;            individual lanes
+; decision 4 could be a variation to 2 where lane is changed based on how many cars in front of you
 ; decision 5 could be a ML model which makes the prediction of which lane to pick to travel
 ;            as far as possible without having to change lanes again
 
 
 to choose-new-lane ; turtle procedure
-  ; Choose a new lane among those with the minimum
-  ; distance to your current lane (i.e., your ycor).
+
+  ; get all the lanes other than the one that you are standing on
   let other-lanes remove ycor lanes
 
   if not empty? other-lanes [
 
+    ; changes to a lane that is nearest to the current one
     if (decision = 1) [
-      let min-dist min map [ y -> abs (y - ycor) ] other-lanes
-      let closest-lanes filter [ y -> abs (y - ycor) = min-dist ] other-lanes
-      set target-lane one-of closest-lanes
+      let min-dist min map [ y -> abs (y - ycor) ] other-lanes    ; gets the distance which is the nearest
+      let closest-lanes filter [ y -> abs (y - ycor) = min-dist ] other-lanes   ; gets a list of lanes that are at that distance
+      set target-lane one-of closest-lanes     ; picks any from the list of the lanes
     ]
 
+    ; changes to a lane that has the minimum number of cars in it at that time
     if (decision = 2) [
-      let no-of-cars map [ y-tar ->  count turtles with [ycor = y-tar] ] other-lanes
-      let min-cars min no-of-cars
-      let location-min-cars position min-cars no-of-cars
-      set target-lane item location-min-cars other-lanes
+      let no-of-cars map [ y-tar ->  count turtles with [ycor = y-tar] ] other-lanes    ; gets an array with number of cars in that lane
+      let min-cars min no-of-cars     ; get the minimum number of cars from the array
+      let location-min-cars position min-cars no-of-cars   ; get the index where the minimum number of cars exist
+      set target-lane item location-min-cars other-lanes   ; get the lane coordinate from the other lanes array to set it to target lane
     ]
 
+    ; changes to a lane where the car has travelled the most in
     if (decision = 3) [
-      let temp-dist-lanes distance-in-lanes
-      let temp-idx position  lanes
-      set temp-dist-lanes remove-item temp-idx temp-dist-lanes
-      let max-dist max temp-dist-lanes
-      let location-max-dist position max-dist temp-dist-lanes
-      set target-lane item location-max-dist other-lanes
+      let temp-dist-lanes distance-in-lanes     ; make a temporary array for future modification to that
+      let temp-idx position old-ycor lanes      ; get the index number for the lane that the car is in right now
+      set temp-dist-lanes remove-item temp-idx temp-dist-lanes    ; delete the distance travelled on the current lane before making a decision
+      let max-dist max temp-dist-lanes     ; get the maximum distance from the array of distances
+      let location-max-dist position max-dist temp-dist-lanes    ; get the index value where the selected lane's coordinate could be located
+      set target-lane item location-max-dist other-lanes    ; get the lane coordinate from the other lanes array to set it to target lane
     ]
 
+    if (decision = 4) [
+      let current-xcor xcor   ; temporarily store xcor of the car to a variable
+      ; let no-of-cars-behind map [ y-tar -> count turtles with [ ycor = y-tar and xcor < current-xcor ] ] other-lanes (COULD BE TRASH)
+      ; gets an array that contains the number of cars ahead of the current car
+      let no-of-cars-ahead map [ y-tar -> count turtles with [ ycor = y-tar and xcor > current-xcor ] ] other-lanes
+      let min-cars-ahead min no-of-cars-ahead      ; get the minimum value in the array
+      let location-min-cars-ahead position min-cars-ahead no-of-cars-ahead    ; get the index where the minimum value was found
+      set target-lane item location-min-cars-ahead other-lanes   ; get the lane coordinate from the other lanes array to set it to target lane
+    ]
 
+    if (speed != 0) [set patience max-patience]   ; the car is now moving to a new lane with max-patience
+    if (speed <= 0) [set patience 0]  ; if the speed is <= 0, then wait because it could be edge case (PLEASE WRITE A BETTER EXPLAINATION)
 
-    if (speed != 0) [set patience max-patience]
   ]
+
 end
 
 to move-to-target-lane ; turtle procedure
@@ -289,13 +307,15 @@ to select-car
   ]
 end
 
-to-report number-of-turns
+; function to stop the simulation if a specific number of turns are made
+to-report number-of-lanes-changed
   ; if ticks > 100000 [ report true ]
   set temp [counter] of selected-car
-  if temp > 100 [ report true ]
+  if temp > 50 [ report true ]
   report false
 end
 
+; make that that after the break down, all the cars still have random colors for genralisation
 to-report car-color
   ; give all cars a blueish color, but still make them distinguishable
   report one-of [ blue cyan sky ] + 1.5 + random-float 1.0
@@ -431,7 +451,7 @@ number-of-cars
 number-of-cars
 1
 number-of-lanes * world-width
-35.0
+20.0
 1
 1
 NIL
@@ -482,7 +502,7 @@ deceleration
 deceleration
 0.01
 0.1
-0.05
+0.03
 0.01
 1
 NIL
@@ -658,17 +678,6 @@ ticks
 1
 11
 
-MONITOR
-1314
-223
-1372
-268
-NIL
-ci
-17
-1
-11
-
 SLIDER
 10
 390
@@ -678,7 +687,7 @@ decision
 decision
 1
 5
-3.0
+1.0
 1
 1
 NIL
@@ -688,7 +697,7 @@ MONITOR
 1355
 319
 1413
-365
+364
 NIL
 trial
 17
@@ -1174,10 +1183,10 @@ NetLogo 6.2.0
       <value value="0.02"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="deceleration_testing" repetitions="2" runMetricsEveryStep="true">
+  <experiment name="testing_oct_13" repetitions="15" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
-    <exitCondition>number-of-turns</exitCondition>
+    <exitCondition>number-of-lanes-changed</exitCondition>
     <metric>[recorded] of selected-car</metric>
     <enumeratedValueSet variable="max-patience">
       <value value="30"/>
@@ -1186,14 +1195,10 @@ NetLogo 6.2.0
       <value value="0.006"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="number-of-cars">
-      <value value="20"/>
+      <value value="40"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="deceleration">
-      <value value="0.01"/>
-      <value value="0.02"/>
       <value value="0.03"/>
-      <value value="0.04"/>
-      <value value="0.05"/>
     </enumeratedValueSet>
   </experiment>
   <experiment name="experiment" repetitions="1" runMetricsEveryStep="true">
