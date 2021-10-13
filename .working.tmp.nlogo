@@ -1,8 +1,14 @@
+extensions [array]
+
 globals [
   selected-car   ; the currently selected car
   lanes          ; a list of the y coordinates of different lanes
   broken-car     ; the currently selected broken-car
   temp           ; the variable to count the number of turns
+
+  ci ; trash trial
+
+  ; decision      ; which model to chose from to change the lane
 ]
 
 turtles-own [
@@ -16,6 +22,11 @@ turtles-own [
   traveled      ; total distance travelled by the car
   recorded
   old-xcor
+
+  turned        ; variable to make sure that only valid turns are calculated
+  distance-in-lanes ; array that stores the distance covered whi
+  old-ycor      ; variable to keep track of the last road that the car drove on
+
 ]
 
 to setup
@@ -23,6 +34,7 @@ to setup
   set-default-shape turtles "car"
   draw-road
   create-or-remove-cars
+  ; set decision 2
   set selected-car one-of turtles
   set broken-car one-of turtles
   ask selected-car [ set color red ]
@@ -42,12 +54,14 @@ to create-or-remove-cars
     set color car-color
     move-to one-of free road-patches
     set target-lane pycor
+    set distance-in-lanes n-values number-of-lanes [0]
     set heading 90
     set top-speed 0.5 + random-float 0.5
     set speed 0.5
     set changing 0
     set counter 0
     set old-xcor -20
+    set old-ycor pycor
     set patience random max-patience
   ]
 
@@ -114,25 +128,47 @@ to go
   create-or-remove-cars
   ask [ other turtles ] of broken-car [
     move-forward
-
-    if xcor >= old-xcor [set traveled traveled + xcor - old-xcor]
-    if old-xcor > xcor [set traveled traveled + xcor - old-xcor + 40]
+    let dist 0
+    if xcor >= old-xcor [ set dist xcor - old-xcor ]
+    if old-xcor > xcor [ set dist xcor - old-xcor + 40 ]
     set old-xcor xcor
 
+    let lane-loc position ycor lanes
+
+    if (is-number? lane-loc) [
+
+      let temp-dist item lane-loc distance-in-lanes
+      set distance-in-lanes replace-item lane-loc distance-in-lanes (temp-dist + dist)
+
+    ]
+
+    set traveled traveled + dist
+
   ]
-  ask broken-car [break-down-car]
+  ask broken-car [ break-down-car ]
   ask turtles with [ patience <= 0 ] [
     set changing 1
-    set counter counter + 1
+    ; set counter counter + 1
     set recorded traveled
     choose-new-lane
+    set turned false
   ]
-  ask turtles with [ ycor != target-lane ] [ move-to-target-lane ]
+  ask turtles with [ ycor != target-lane and turned = false] [
+    move-to-target-lane
+  ]
 
+  ask turtles with [ ycor = target-lane and turned = false] [
+    set counter counter + 1
+    set turned true
+    set old-ycor target-lane
+  ]
+
+  set ci count turtles with [ycor = -1]
   tick
 
-  if ticks mod 10 = 0 [
+  if ticks mod 90 = 0 [
     ask broken-car [ set color car-color ]
+    ask selected-car [ set color red ]
     set broken-car one-of turtles
     ask broken-car [ set color gray ]
     ask broken-car [ break-down-car ]
@@ -174,15 +210,47 @@ to speed-up-car ; turtle procedure
   if speed > top-speed [ set speed top-speed ]
 end
 
+; decision 1 is to choose the new lane that is the nearest to the one that you are on
+; decision 2 is to choose the lane that has the minimum number of cars on it atm
+; decision 3 is to choose the lane that you got to travel the most in other than yours
+; decision 4 could be a variation to 2 which compares to how many are behind and ahead in
+;            individual lanes
+; decision 5 could be a ML model which makes the prediction of which lane to pick to travel
+;            as far as possible without having to change lanes again
+
+
 to choose-new-lane ; turtle procedure
   ; Choose a new lane among those with the minimum
   ; distance to your current lane (i.e., your ycor).
   let other-lanes remove ycor lanes
+
   if not empty? other-lanes [
-    let min-dist min map [ y -> abs (y - ycor) ] other-lanes
-    let closest-lanes filter [ y -> abs (y - ycor) = min-dist ] other-lanes
-    set target-lane one-of closest-lanes
-    set patience max-patience
+
+    if (decision = 1) [
+      let min-dist min map [ y -> abs (y - ycor) ] other-lanes
+      let closest-lanes filter [ y -> abs (y - ycor) = min-dist ] other-lanes
+      set target-lane one-of closest-lanes
+    ]
+
+    if (decision = 2) [
+      let no-of-cars map [ y-tar ->  count turtles with [ycor = y-tar] ] other-lanes
+      let min-cars min no-of-cars
+      let location-min-cars position min-cars no-of-cars
+      set target-lane item location-min-cars other-lanes
+    ]
+
+    if (decision = 3) [
+      let temp-dist-lanes distance-in-lanes
+      let temp-idx position  lanes
+      set temp-dist-lanes remove-item temp-idx temp-dist-lanes
+      let max-dist max temp-dist-lanes
+      let location-max-dist position max-dist temp-dist-lanes
+      set target-lane item location-max-dist other-lanes
+    ]
+
+
+
+    if (speed != 0) [set patience max-patience]
   ]
 end
 
@@ -222,7 +290,7 @@ to select-car
 end
 
 to-report number-of-turns
-  if ticks > 100000 [ report true ]
+  ; if ticks > 100000 [ report true ]
   set temp [counter] of selected-car
   if temp > 100 [ report true ]
   report false
@@ -238,6 +306,10 @@ to-report number-of-lanes
   ; reporter and create a slider on the interface with the same
   ; name. 8 lanes is the maximum that currently fit in the view.
   report 4
+end
+
+to-report trial
+  report [ item 1 distance-in-lanes ] of selected-car
 end
 
 
@@ -359,7 +431,7 @@ number-of-cars
 number-of-cars
 1
 number-of-lanes * world-width
-56.0
+35.0
 1
 1
 NIL
@@ -582,6 +654,43 @@ MONITOR
 112
 NIL
 ticks
+17
+1
+11
+
+MONITOR
+1314
+223
+1372
+268
+NIL
+ci
+17
+1
+11
+
+SLIDER
+10
+390
+215
+423
+decision
+decision
+1
+5
+3.0
+1
+1
+NIL
+HORIZONTAL
+
+MONITOR
+1355
+319
+1413
+365
+NIL
+trial
 17
 1
 11
