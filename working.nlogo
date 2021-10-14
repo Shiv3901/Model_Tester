@@ -20,6 +20,8 @@ turtles-own [
 
   old-xcor      ; variable to keep track of the distance travelled
   old-ycor      ; variable to keep track of the last road that the car drove on
+
+  detector      ; variable to run analysis that makes sure that the variable is correctly recorded
 ]
 
 to setup
@@ -55,6 +57,7 @@ to create-or-remove-cars
     set old-xcor -20
     set old-ycor pycor
     set patience random max-patience
+    set detector 0
   ]
 
   if count turtles > number-of-cars [
@@ -163,6 +166,7 @@ to go
     set counter counter + 1
     set changing-lanes false    ; this makes sure that its only counted once
     set old-ycor target-lane    ; useful for 4th decision
+    set detector recorded
   ]
 
   tick
@@ -687,7 +691,7 @@ decision
 decision
 1
 5
-1.0
+3.0
 1
 1
 NIL
@@ -1216,6 +1220,48 @@ NetLogo 6.2.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="deceleration">
       <value value="0.05"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="testing_oct_14" repetitions="15" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>number-of-lanes-changed</exitCondition>
+    <metric>[counter] of selected-car</metric>
+    <enumeratedValueSet variable="max-patience">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.006"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="40"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.03"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="testing_all_runs" repetitions="5" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>number-of-lanes-changed</exitCondition>
+    <metric>[detector] of selected-car</metric>
+    <enumeratedValueSet variable="decision">
+      <value value="1"/>
+      <value value="2"/>
+      <value value="3"/>
+      <value value="4"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.006"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-patience">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="40"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.03"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>
