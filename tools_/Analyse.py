@@ -9,6 +9,8 @@ class Analyse:
     
     def __init__(self, path):
 
+        self.no_of_decisions = 4
+        
         # read in the data
         self.data = pd.read_csv(path, low_memory=False)
         
@@ -20,9 +22,12 @@ class Analyse:
         
         # get the formatted version that could be used to plot the data
         self.lane_data_temp = self.get_all_lanes_data()
+        _ = self.filter_all_data()
         
         # array for the number of turns (right now the only variable for testing)
         self.turns = []
+        
+#         print(path)
     
     # function to return the values (characteristics) in a fom of dictionary
     def get_characteristics(self):
@@ -59,25 +64,43 @@ class Analyse:
         
         return values
     
+    def modify(self, data):
+        
+        max_elements = max([len(row) for row in data])
+        
+        for i in range(len(data)):
+            
+            for j in range(max_elements - len(data[i])):
+                
+                data[i].append(data[i][-1])
+                
+        return data
+    
     # function to average out the runs from the data
     def filter_all_data(self):
         
-        size_of_runs = len(self.lane_data_temp) // 4
+        size_of_runs = len(self.lane_data_temp) // self.no_of_decisions
         
-        values = self.lane_data_temp
-        new_values = []
+        values = self.modify(self.lane_data_temp)
+        number_of_lane_changes = len(self.lane_data_temp[0])
+
+        new_values = [ 
+            [0] * number_of_lane_changes for _ in range(self.no_of_decisions)
+        ]
         
-        for i in range(4, size_of_runs):
+        # code to update the new values array
+        
+        for i in range(self.no_of_decisions):
             
-            temp_arr = [0] * len(values[i])
-            
-            for j in range(size_of_runs):
+            for k in range(size_of_runs):
                 
-                for k, val in enumerate(values[i+j]):
+                for idx, val in enumerate(values[i * size_of_runs + k]):
                     
-                    print("adgf")
+                    new_values[i][idx] += (val / size_of_runs)
+                
+        self.lane_data_temp = new_values
                     
-        return 
+        return self.lane_data_temp
                 
                 
             
@@ -120,12 +143,15 @@ class Analyse:
     # function to generate a line plot for now
     def plot_line_plot(self, variable, title):
         
-        titles = self.get_titles(variable)
+#         line_titles = self.get_titles(variable)
+        line_titles = self.get_line_titles()
         
-        for idx, column in enumerate(self.lane_data_temp):
+#         print(len(self.lane_data_temp))
+        
+        for idx, row in enumerate(self.lane_data_temp):
             
-            self.turns = [i for i in range(len(column))]
-            plt.plot(column, self.turns, label = str(titles[idx]))
+            self.turns = [i for i in range(len(row))]
+            plt.plot(row, self.turns, label = str(line_titles[idx]))
         
         plt.xlim(left=0)
         plt.ylim(bottom=0)
@@ -135,16 +161,149 @@ class Analyse:
         plt.legend()
         plt.show()
         
+        return plt
+        
+    # function to filter data for bar plot
+    def filter_data_for_bar_plot(self, interval):
+        
+        values = []
+        
+        left = 0
+        threshold = interval
+        
+        for row in self.lane_data_temp:
+            
+            temp = []
+            threshold = interval
+            
+#             print(row)
+            
+            for i, val in enumerate(row):
+                
+                if val > threshold:
+#                     print(row[i-1], row[left], i, left, threshold)
+                    
+                    if i - left - 1 != 0 and (row[i-1] > row[left]):
+                        temp.append( (row[i-1] - row[left]) / (i - left - 1) )
+                    else:
+                        temp.append(0)
+                        
+                    left = i
+                    threshold += interval
+            
+#             if left != len(row) - 1:
+#                 temp.append( (row[i-1] - row[left]) / (i - left - 1) )
+#             else:
+#                 temp.append(0)
+            
+            values.append(temp)
+        
+        return values
+        
+        
+        
+    # function to plot a multiple bar plot for the decisions
+    def plot_bar_plot(self, variable, title, interval):
+        
+        data = self.modify(self.filter_data_for_bar_plot(interval))
+        decisions = self.get_line_titles()
+        
+        dicty = {}
+        
+        max_x_elements = max( [ len(row) for row in data ] )
+        
+        titles = [ str(i* interval)+" - "+str((i + 1) * interval) for i in range(max_x_elements) ]
+        
+        for idx, each_decision in enumerate(data):
+            
+            dicty[decisions[idx]] = each_decision
+            
+        plotdata = pd.DataFrame(dicty, index=titles)
+        plotdata.plot(kind="bar")
+ 
+        plotdata.head()
+        fs = 24 # font size
+        plt.title(title, fontsize=fs)
+        plt.xlabel("Intervals", fontsize=fs)
+        plt.ylabel("Moving Average", fontsize=fs)
+        
+        return plotdata
+        
     # function to return the data for other purpose
     def get_data_for_analysis(self):
-        return self.lane_data_temp
+        return self.filter_data_for_bar_plot(500)
+        
+    # function to return the line titles for all the decisions
+    def get_line_titles(self):
+        return [i + 1 for i in range(self.no_of_decisions)]
         
     # function to get the variable values as titles
     def get_titles(self, target):
         
         res = []
-        
+
         for _, values in self.characteristics.items():
             res.append(values[target])
         
         return res
+    
+    # function to return data that could be plotted using a moving average plot
+    def get_data_for_moving_avg(self):
+        
+        values = []
+        
+        for row in self.lane_data_temp:
+            temp_arr = [0 for _ in range(len(row)-1)] 
+            for j in range(1, len(row)):
+                temp_arr[j-1] =  row[j] - row[j-1] if row[j] > row[j-1] else 0
+        
+            values.append(temp_arr)
+        
+        return values
+    
+    # function to return a moving average plot
+    def get_moving_average_plot(self, variable, title, interval):
+        
+        data = self.get_data_for_moving_avg()
+        decisions = self.get_line_titles()
+        
+        dicty = {}
+        
+        max_x_elements = max( [ len(row) for row in data ] )
+        
+#         titles = [ str(i* interval)+" - "+str((i + 1) * interval) for i in range(max_x_elements) ]
+        
+        for idx, each_decision in enumerate(data):
+            
+            dicty[decisions[idx]] = each_decision
+            
+        plotdata = pd.DataFrame(dicty)
+        
+        for i in range(self.no_of_decisions):
+            
+            plotdata["0"+str(i+1)] = plotdata.iloc[:, i].rolling(window=interval).mean()
+            
+        for i in range(self.no_of_decisions):
+            del plotdata[i+1]
+ 
+        # it is a bit finicky but it works for now
+        plotdata.plot(kind="line")
+        
+        
+        fs = 18 # font size
+        plt.title(title, fontsize=fs+2)
+        plt.xlabel("No. of Lane Changes", fontsize=fs)
+        plt.ylabel("Moving Avg", fontsize=fs)
+        
+        return plotdata
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        

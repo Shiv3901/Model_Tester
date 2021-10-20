@@ -211,7 +211,7 @@ to slow-down-car ; turtle procedure
   set speed (speed - deceleration)
   if speed < 0 [ set speed deceleration ]
   ; every time you hit the brakes, you loose a little patience
-  set patience patience - 1
+  ifelse patience > 0 [ set patience patience - 1 ] [ set patience 0 ]
 end
 
 to speed-up-car ; turtle procedure
@@ -232,45 +232,56 @@ to choose-new-lane ; turtle procedure
   ; get all the lanes other than the one that you are standing on
   let other-lanes remove ycor lanes
 
+
+
   if not empty? other-lanes [
 
-    ; changes to a lane that is nearest to the current one
-    if (decision = 1) [
-      let min-dist min map [ y -> abs (y - ycor) ] other-lanes    ; gets the distance which is the nearest
-      let closest-lanes filter [ y -> abs (y - ycor) = min-dist ] other-lanes   ; gets a list of lanes that are at that distance
-      set target-lane one-of closest-lanes     ; picks any from the list of the lanes
-    ]
+    ; if there is just one lane to choose from then choose it to save memory for running any decision
+    ifelse (length other-lanes = 1) [
 
-    ; changes to a lane that has the minimum number of cars in it at that time
-    if (decision = 2) [
-      let no-of-cars map [ y-tar ->  count turtles with [ycor = y-tar] ] other-lanes    ; gets an array with number of cars in that lane
-      let min-cars min no-of-cars     ; get the minimum number of cars from the array
-      let location-min-cars position min-cars no-of-cars   ; get the index where the minimum number of cars exist
-      set target-lane item location-min-cars other-lanes   ; get the lane coordinate from the other lanes array to set it to target lane
-    ]
+      set target-lane one-of other-lanes
 
-    ; changes to a lane where the car has travelled the most in
-    if (decision = 3) [
-      let temp-dist-lanes distance-in-lanes     ; make a temporary array for future modification to that
-      let temp-idx position old-ycor lanes      ; get the index number for the lane that the car is in right now
-      set temp-dist-lanes remove-item temp-idx temp-dist-lanes    ; delete the distance travelled on the current lane before making a decision
-      let max-dist max temp-dist-lanes     ; get the maximum distance from the array of distances
-      let location-max-dist position max-dist temp-dist-lanes    ; get the index value where the selected lane's coordinate could be located
-      set target-lane item location-max-dist other-lanes    ; get the lane coordinate from the other lanes array to set it to target lane
-    ]
+    ] [
 
-    if (decision = 4) [
-      let current-xcor xcor   ; temporarily store xcor of the car to a variable
-      ; let no-of-cars-behind map [ y-tar -> count turtles with [ ycor = y-tar and xcor < current-xcor ] ] other-lanes (COULD BE TRASH)
-      ; gets an array that contains the number of cars ahead of the current car
-      let no-of-cars-ahead map [ y-tar -> count turtles with [ ycor = y-tar and xcor > current-xcor ] ] other-lanes
-      let min-cars-ahead min no-of-cars-ahead      ; get the minimum value in the array
-      let location-min-cars-ahead position min-cars-ahead no-of-cars-ahead    ; get the index where the minimum value was found
-      set target-lane item location-min-cars-ahead other-lanes   ; get the lane coordinate from the other lanes array to set it to target lane
-    ]
+      ; changes to a lane that is nearest to the current one
+      if (decision = 1) [
+        let min-dist min map [ y -> abs (y - ycor) ] other-lanes    ; gets the distance which is the nearest
+        let closest-lanes filter [ y -> abs (y - ycor) = min-dist ] other-lanes   ; gets a list of lanes that are at that distance
+        set target-lane one-of closest-lanes     ; picks any from the list of the lanes
+      ]
 
-    if (speed != 0) [set patience max-patience]   ; the car is now moving to a new lane with max-patience
-    if (speed <= 0) [set patience 0]  ; if the speed is <= 0, then wait because it could be edge case (PLEASE WRITE A BETTER EXPLAINATION)
+      ; changes to a lane that has the minimum number of cars in it at that time
+      if (decision = 2) [
+        let no-of-cars map [ y-tar ->  count turtles with [ycor = y-tar] ] other-lanes    ; gets an array with number of cars in that lane
+        let min-cars min no-of-cars     ; get the minimum number of cars from the array
+        let location-min-cars position min-cars no-of-cars   ; get the index where the minimum number of cars exist
+        set target-lane item location-min-cars other-lanes   ; get the lane coordinate from the other lanes array to set it to target lane
+      ]
+
+      ; changes to a lane where the car has travelled the most in
+      if (decision = 3) [
+        let temp-dist-lanes distance-in-lanes     ; make a temporary array for future modification to that
+        let temp-idx position old-ycor lanes      ; get the index number for the lane that the car is in right now
+        set temp-dist-lanes remove-item temp-idx temp-dist-lanes    ; delete the distance travelled on the current lane before making a decision
+        let max-dist max temp-dist-lanes     ; get the maximum distance from the array of distances
+        let location-max-dist position max-dist temp-dist-lanes    ; get the index value where the selected lane's coordinate could be located
+        set target-lane item location-max-dist other-lanes    ; get the lane coordinate from the other lanes array to set it to target lane
+      ]
+
+      if (decision = 4) [
+        let current-xcor xcor   ; temporarily store xcor of the car to a variable
+                                ; let no-of-cars-behind map [ y-tar -> count turtles with [ ycor = y-tar and xcor < current-xcor ] ] other-lanes (COULD BE TRASH)
+                                ; gets an array that contains the number of cars ahead of the current car
+        let no-of-cars-ahead map [ y-tar -> count turtles with [ ycor = y-tar and xcor > current-xcor ] ] other-lanes
+        let min-cars-ahead min no-of-cars-ahead      ; get the minimum value in the array
+        let location-min-cars-ahead position min-cars-ahead no-of-cars-ahead    ; get the index where the minimum value was found
+        set target-lane item location-min-cars-ahead other-lanes   ; get the lane coordinate from the other lanes array to set it to target lane
+      ]
+
+      if (speed != 0) [set patience max-patience]   ; the car is now moving to a new lane with max-patience
+      if (speed <= 0) [set patience 0]  ; if the speed is <= 0, then wait because it could be edge case (PLEASE WRITE A BETTER EXPLAINATION)
+
+    ]
 
   ]
 
@@ -315,7 +326,7 @@ end
 to-report number-of-lanes-changed
   ; if ticks > 100000 [ report true ]
   set temp [counter] of selected-car
-  if temp > 50 [ report true ]
+  if temp > 100 [ report true ]
   report false
 end
 
@@ -329,7 +340,7 @@ to-report number-of-lanes
   ; To make the number of lanes easily adjustable, remove this
   ; reporter and create a slider on the interface with the same
   ; name. 8 lanes is the maximum that currently fit in the view.
-  report 4
+  report 2
 end
 
 to-report trial
@@ -691,7 +702,7 @@ decision
 decision
 1
 5
-3.0
+4.0
 1
 1
 NIL
@@ -1240,7 +1251,7 @@ NetLogo 6.2.0
       <value value="0.03"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="testing_all_runs" repetitions="5" runMetricsEveryStep="true">
+  <experiment name="testing_all_runs" repetitions="100" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <exitCondition>number-of-lanes-changed</exitCondition>
