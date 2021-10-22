@@ -7,7 +7,17 @@ globals [
   temp           ; the variable to count the number of lane-changes
 
   criteria-matrix  ; matrix to store the criteria weights
+
   weights   ; weights to be considered for all decisions
+
+  ; for testing purposes I am putting in more weights
+
+  wei_1
+  wei_2
+  wei_3
+  wei_4
+
+  ;
 
   ; variables to store the weights for all decisions for AHP model
   deci_1_we ; decision_1_weights
@@ -51,9 +61,12 @@ to setup
 
   ; set criteria-matrix matrix:from-row-list [ [1 2 1 2.67] [0.5 1 0.5 1.33] [1 2 1 1.67] [0.375 0.75 0.375 1] ]
 
-  set weights [0.01 0.97 0.01 0.01]
+  ; set weights set-weights [1 2 3 4] 0
 
-
+  set wei_1 set-weights [1 2 1 6] 0
+  set wei_2 set-weights [2 0.01 0.01 0.01] 0
+  set wei_3 set-weights [3 2 1 4] 0
+  set wei_4 set-weights [0.01 2 0.01 2] 0
 
 end
 
@@ -356,7 +369,7 @@ end
 to-report number-of-lanes-changed
   ; if ticks > 100000 [ report true ]
   set temp [counter] of selected-car
-  if temp > 100 [ report true ]
+  if temp > 50 [ report true ]
   report false
 end
 
@@ -395,24 +408,24 @@ to-report get-value
 
   let decision-array map [ i -> (item i deci_1_we) + (item i deci_2_we) + (item i deci_3_we) + (item i deci_4_we) ] temp-array
 
-  ; ; show decision-array
-
   report decision-array
 
 end
 
 to-report set-weights [values store]
 
-  let wei 1
-  ; show values
-  if (store > 0) [ set wei item (store - 1) weights ]
+  if (weights-decision = 1) [set weights wei_1]
+  if (weights-decision = 2) [set weights wei_2]
+  if (weights-decision = 3) [set weights wei_3]
+  if (weights-decision = 4) [set weights wei_4]
 
- ; ; show wei
+  let wei 1
+  if (store > 0) [set wei (item (store - 1) weights)]
 
   let row-values map [ i -> row-value values i ] values
   let total reduce + row-values
   if (total = 0) [set total 1]
-  let ans map [ i -> ( i / total ) * wei ] row-values
+  let ans map [ i -> ( i / total ) * wei] row-values
   ; ; show ans
 
   report ans
@@ -440,7 +453,6 @@ to-report invert-values [values]
   let indexes n-values (number-of-lanes - 1) [i -> i]
   let locations filter [i -> (item i values) = 0] indexes
   if not empty? locations [
-
     ; replace-item 2 [2 7 4 5] 15
     foreach locations [x -> show replace-item x values 1]
 
@@ -458,7 +470,6 @@ to-report lanes-for-deci-2 [other-lanes]
 end
 
 ; thinking ends here
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 225
@@ -811,7 +822,7 @@ decision
 decision
 1
 5
-1.0
+5.0
 1
 1
 NIL
@@ -827,6 +838,21 @@ trial
 17
 1
 11
+
+SLIDER
+20
+440
+192
+473
+weights-decision
+weights-decision
+1
+4
+4.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1360,7 +1386,7 @@ NetLogo 6.2.0
       <value value="0.03"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="testing_all_runs" repetitions="30" runMetricsEveryStep="true">
+  <experiment name="testing_all_runs" repetitions="5" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <exitCondition>number-of-lanes-changed</exitCondition>
@@ -1383,6 +1409,9 @@ NetLogo 6.2.0
     </enumeratedValueSet>
     <enumeratedValueSet variable="deceleration">
       <value value="0.03"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="weights-decision">
+      <value value="4"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>

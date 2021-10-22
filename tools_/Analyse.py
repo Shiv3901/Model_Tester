@@ -6,10 +6,12 @@ init_notebook_mode(connected=True)
 import math as ma
 
 class Analyse:
-    
-    def __init__(self, path):
 
-        self.no_of_decisions = 5
+    # constructor that loads the dataset and gets everything ready for analysing
+    def __init__(self, path, decisions):
+
+        # initial no_of_decisions, useful at the normalisation stage
+        self.no_of_decisions = decisions
         
         # read in the data
         self.data = pd.read_csv(path, low_memory=False)
@@ -22,7 +24,7 @@ class Analyse:
         
         # get the formatted version that could be used to plot the data
         self.lane_data_temp = self.get_all_lanes_data()
-        _ = self.filter_all_data()
+        self.filter_all_data()
         
         # array for the number of turns (right now the only variable for testing)
         self.turns = []
@@ -59,7 +61,7 @@ class Analyse:
         for col in range(self.cols):
             
             # send in the data for the corresponding column
-            temp_arr = self.get_array(self.data[str(col+1)][11:])
+            temp_arr = self.get_array(self.data[str(col+1)][12:])
             values.append(temp_arr)
         
         return values
@@ -99,45 +101,46 @@ class Analyse:
                     new_values[i][idx] += (val / size_of_runs)
                 
         self.lane_data_temp = new_values
-                    
-        return self.lane_data_temp
-                
                 
             
-    # function to get a single array in the required version
+   # function to get a single array in the required version
     def get_array(self, data):
-        
+
         # empty array which is to be returned
         array = []
-        
+
         for val in data: 
             array.append(val)
-            
+
         # get all the values that are not nan (refactor this part if you get time in future)
         for i in range(len(array)-1, -1, -1):
-            
+
             if not ma.isnan(array[i]):
                 array = array[:i+1]
                 break
-        
+
         # return the array after passing the array to a diffrent function
         return self.get_lane_change_array(array)
-        
+
     # function to get an array of the tick when a turn took place
     def get_lane_change_array(self, array):
-        
+
         # empty array
         res = [0]
         curr = 0
-        
+
+        # print(array)
+
         array_int = []
-        for i in array: array_int.append(int(i))
-        
+        for i in array: 
+            if ma.isnan(i): break
+            array_int.append(int(i))
+
         for idx, val in enumerate(array):
             if curr != val:
                 curr = val
                 res.append(val)
-        
+
         return res
     
     # function to generate a line plot for now
