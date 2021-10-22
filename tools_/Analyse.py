@@ -9,7 +9,7 @@ class Analyse:
     
     def __init__(self, path):
 
-        self.no_of_decisions = 4
+        self.no_of_decisions = 5
         
         # read in the data
         self.data = pd.read_csv(path, low_memory=False)
@@ -155,8 +155,10 @@ class Analyse:
         
         plt.xlim(left=0)
         plt.ylim(bottom=0)
-        plt.xlabel(title, fontsize=28)
-        plt.ylabel("No. of Lane Changes", fontsize=28)
+        fs = 18
+        plt.title(title, fontsize=fs+2)
+        plt.xlabel("Distance Covered", fontsize=fs)
+        plt.ylabel("No. of Lane Changes", fontsize=fs)
         plt.savefig(variable + ".png")
         plt.legend()
         plt.show()
@@ -222,8 +224,8 @@ class Analyse:
         plotdata.plot(kind="bar")
  
         plotdata.head()
-        fs = 24 # font size
-        plt.title(title, fontsize=fs)
+        fs = 18 # font size
+        plt.title(title, fontsize=fs+2)
         plt.xlabel("Intervals", fontsize=fs)
         plt.ylabel("Moving Average", fontsize=fs)
         

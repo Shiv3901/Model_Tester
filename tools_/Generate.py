@@ -2,8 +2,13 @@ from tools_ import Analyse
 
 class Generate:
     
-    def __init__(self, paths):
-        self.analyse_obj_array = [ Analyse.Analyse(path) for path in paths ]
+    def __init__(self, direc: str,paths):
+        self.analyse_obj_array = [ Analyse.Analyse(direc + "/" + path) for path in paths ]
+        
+    def generate_all_plots(self, variable, title, width, interval):
+        self.generate_line_plot(variable, title)
+        self.generate_bar_plot(variable, title, width)
+        self.generate_moving_avg_plot(variable, title, interval)
     
     def generate_line_plot(self, variable, title):
          
@@ -12,10 +17,10 @@ class Generate:
             
         return
         
-    def generate_bar_plot(self, variable, title, interval):
+    def generate_bar_plot(self, variable, title, width):
     
         for obj in self.analyse_obj_array:
-            obj.plot_bar_plot(variable, title, interval)
+            obj.plot_bar_plot(variable, title, width)
             
         return
         

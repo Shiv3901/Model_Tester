@@ -58,6 +58,7 @@ to create-or-remove-cars
     set old-ycor pycor
     set patience random max-patience
     set detector 0
+    set changing-lanes false
   ]
 
   if count turtles > number-of-cars [
@@ -237,11 +238,11 @@ to choose-new-lane ; turtle procedure
   if not empty? other-lanes [
 
     ; if there is just one lane to choose from then choose it to save memory for running any decision
-    ifelse (length other-lanes = 1) [
+    ;ifelse ( number-of-lanes = 2) [
 
-      set target-lane one-of other-lanes
+    ;  set target-lane one-of other-lanes
 
-    ] [
+   ; ] [
 
       ; changes to a lane that is nearest to the current one
       if (decision = 1) [
@@ -278,10 +279,13 @@ to choose-new-lane ; turtle procedure
         set target-lane item location-min-cars-ahead other-lanes   ; get the lane coordinate from the other lanes array to set it to target lane
       ]
 
-      if (speed != 0) [set patience max-patience]   ; the car is now moving to a new lane with max-patience
-      if (speed <= 0) [set patience 0]  ; if the speed is <= 0, then wait because it could be edge case (PLEASE WRITE A BETTER EXPLAINATION)
+    ;]
 
-    ]
+    set patience max-patience
+
+    ;if (speed != 0) [set patience max-patience]   ; the car is now moving to a new lane with max-patience
+    ;if (speed <= 0) [set patience 0]  ; if the speed is <= 0, then wait because it could be edge case (PLEASE WRITE A BETTER EXPLAINATION)
+
 
   ]
 
@@ -1251,7 +1255,7 @@ NetLogo 6.2.0
       <value value="0.03"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="testing_all_runs" repetitions="100" runMetricsEveryStep="true">
+  <experiment name="testing_all_runs" repetitions="5" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <exitCondition>number-of-lanes-changed</exitCondition>
