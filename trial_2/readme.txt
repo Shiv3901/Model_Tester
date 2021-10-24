@@ -22,3 +22,17 @@ case for run_8:
 
 - comparing different decision weights array to optimise the weights otself to outrun atleast 3 decisions
 - let's see how that goes
+
+case for run_14:
+
+- comparing different importance weights for the decision model used right now
+-   1: 5 13 5 77
+    2: 2 13 2 83
+    3: 1 13 1 85
+    4: 0.01 2 0.01 2
+
+case for run_16:
+
+- for all the four decisions and my ahp decision model
+- 15 runs for each, let's see what happens
+- criteria weight for decision 5: [1 13 1 85]

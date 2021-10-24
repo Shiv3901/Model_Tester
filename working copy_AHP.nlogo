@@ -12,11 +12,6 @@ globals [
 
   ; for testing purposes I am putting in more weights
 
-  wei_1
-  wei_2
-  wei_3
-  wei_4
-
   ;
 
   ; variables to store the weights for all decisions for AHP model
@@ -36,6 +31,11 @@ turtles-own [
   counter       ; keeps the counter for lane change
   traveled      ; total distance travelled by the car
   recorded
+
+  wei_1
+  wei_2
+  wei_3
+  wei_4
 
   changing-lanes        ; variable to make sure that only valid lane-changes are calculated
   distance-in-lanes     ; array that stores the distance covered in that lane
@@ -61,12 +61,7 @@ to setup
 
   ; set criteria-matrix matrix:from-row-list [ [1 2 1 2.67] [0.5 1 0.5 1.33] [1 2 1 1.67] [0.375 0.75 0.375 1] ]
 
-  ; set weights set-weights [1 2 3 4] 0
-
-  set wei_1 set-weights [1 2 1 6] 0
-  set wei_2 set-weights [2 0.01 0.01 0.01] 0
-  set wei_3 set-weights [3 2 1 4] 0
-  set wei_4 set-weights [0.01 2 0.01 2] 0
+  set weights matrix:from-column-list [[0.328 0.209 0.125 0.338]]
 
 end
 
@@ -88,7 +83,7 @@ to create-or-remove-cars
     set top-speed 0.5 + random-float 0.5
     set speed 0.5
     set counter 0
-    set old-xcor -20
+    set old-xcor xcor
     set old-ycor pycor
     set patience random max-patience
     set detector 0
@@ -166,8 +161,10 @@ to go
 
     ; code to calculate the distance travelled from the last time it was calculated
     let dist 0
-    if xcor >= old-xcor [ set dist xcor - old-xcor ]
-    if old-xcor > xcor [ set dist xcor - old-xcor + 50 ]
+    ifelse xcor >= old-xcor [ set dist xcor - old-xcor ] [ set dist old-xcor - xcor ]
+    if (xcor < -25) [
+      ifelse (dist - 50 >= 0) [set dist dist - 50] [set dist 0]
+    ]
     set old-xcor xcor
     set traveled traveled + dist
 
@@ -254,6 +251,44 @@ to speed-up-car ; turtle procedure
   if speed > top-speed [ set speed top-speed ]
 end
 
+to-report utility [values deci_number]
+
+  if (deci_number = 1) [
+    report map [ x -> (x * -25) + 150 ] values
+  ]
+
+  if (deci_number = 2) [
+
+    ifelse (number-of-cars > 1) [
+      report map [ x -> ( (-100 / (number-of-cars - 1) ) * x ) + 100 ] values
+    ] [
+      report n-values (length values) [100]
+    ]
+
+  ]
+
+  if (deci_number = 3) [
+
+    let max-value max values
+
+    ifelse (max-value > max-distance) [ set max-distance max-distance * 1.5] [ set max-distance 10000 ]
+
+
+    report map [ x -> (100 / max-distance) * x ] values
+  ]
+
+  if (deci_number = 4) [
+
+    ifelse (number-of-cars > 1) [
+      report map [ x -> ( (-100 / (number-of-cars - 1) ) * x ) + 100 ] values
+    ] [
+      report n-values (length values) [100]
+    ]
+
+  ]
+
+end
+
 ; decision 1 is to choose the new lane that is the nearest to the one that you are on
 ; decision 2 is to choose the lane that has the minimum number of cars on it atm
 ; decision 3 is to choose the lane that you got to travel the most in other than yours
@@ -269,39 +304,33 @@ to choose-new-lane ; turtle procedure
 
   if not empty? other-lanes [
 
-    let deci_1_lanes invert-values lanes-for-deci-1 other-lanes
-    let deci_2_lanes invert-values lanes-for-deci-2 other-lanes
-    let deci_3_lanes lanes-for-deci-3 other-lanes
-    let deci_4_lanes invert-values lanes-for-deci-4 other-lanes
+    set wei_1 utility (lanes-for-deci-1 other-lanes) 1
+    set wei_2 utility (lanes-for-deci-2 other-lanes) 2
+    set wei_3 utility (lanes-for-deci-3 other-lanes) 3
+    set wei_4 utility (lanes-for-deci-4 other-lanes) 4
 
     ; changes to a lane that is nearest to the current one
     if (decision = 1) [
-      set target-lane get-target-lane deci_1_lanes other-lanes
+      set target-lane get-target-lane wei_1 other-lanes
     ]
 
     ; changes to a lane that has the minimum number of cars in it at that time
     if (decision = 2) [
-      set target-lane get-target-lane deci_2_lanes other-lanes
+      set target-lane get-target-lane wei_2 other-lanes
     ]
 
     ; changes to a lane where the car has travelled the most in
     if (decision = 3) [
-      set target-lane get-target-lane deci_3_lanes other-lanes
+      set target-lane get-target-lane wei_3 other-lanes
     ]
 
     if (decision = 4) [
-      set target-lane get-target-lane deci_4_lanes other-lanes
+      set target-lane get-target-lane wei_4 other-lanes
     ]
-
-    set deci_1_we set-weights deci_1_lanes 1
-    set deci_2_we set-weights deci_2_lanes 2
-    set deci_3_we set-weights deci_3_lanes 3
-    set deci_4_we set-weights deci_4_lanes 4
 
     if (decision = 5) [
 
-      let values get-value
-      ; show values
+      let values convert-to-list cal
       set target-lane get-target-lane values other-lanes
 
     ]
@@ -316,6 +345,29 @@ to choose-new-lane ; turtle procedure
 
 end
 
+to-report convert-to-list [final]
+
+  let x1 matrix:get final 0 0
+  let x2 matrix:get final 1 0
+  let x3 matrix:get final 2 0
+
+  report (list x1 x2 x3)
+
+end
+
+to-report cal
+
+  let wei_final matrix:make-constant (length wei_1) 4 0
+
+  matrix:set-column wei_final 0 wei_1
+  matrix:set-column wei_final 1 wei_2
+  matrix:set-column wei_final 2 wei_3
+  matrix:set-column wei_final 3 wei_4
+
+  report matrix:times wei_final weights
+
+end
+
 to-report lanes-for-deci-4 [other-lanes]
   let current-xcor xcor
   let field-of-view 15
@@ -325,8 +377,11 @@ end
 
 to-report lanes-for-deci-3 [other-lanes]
   let temp-dist-lanes distance-in-lanes     ; make a temporary array for future modification to that
-  let temp-idx position old-ycor lanes      ; get the index number for the lane that the car is in right now
-  set temp-dist-lanes remove-item temp-idx temp-dist-lanes    ; delete the distance travelled on the current lane before making a decision
+  ; only delete the current lane if the car is standing on it
+  if (length other-lanes != number-of-lanes) [
+    let temp-idx position old-ycor lanes      ; get the index number for the lane that the car is in right now
+    set temp-dist-lanes remove-item temp-idx temp-dist-lanes    ; delete the distance travelled on the current lane before making a decision
+  ]
   report temp-dist-lanes
 end
 
@@ -369,7 +424,7 @@ end
 to-report number-of-lanes-changed
   ; if ticks > 100000 [ report true ]
   set temp [counter] of selected-car
-  if temp > 50 [ report true ]
+  if temp > 200 [ report true ]
   report false
 end
 
@@ -383,7 +438,7 @@ to-report number-of-lanes
   ; To make the number of lanes easily adjustable, remove this
   ; reporter and create a slider on the interface with the same
   ; name. 8 lanes is the maximum that currently fit in the view.
-  report 5
+  report 4
 end
 
 to-report trial
@@ -402,74 +457,53 @@ end
 
 ; to-report
 
-to-report get-value
-
-  let temp-array n-values (number-of-lanes - 1) [i -> i]
-
-  let decision-array map [ i -> (item i deci_1_we) + (item i deci_2_we) + (item i deci_3_we) + (item i deci_4_we) ] temp-array
-
-  report decision-array
-
-end
-
-to-report set-weights [values store]
-
-  if (weights-decision = 1) [set weights wei_1]
-  if (weights-decision = 2) [set weights wei_2]
-  if (weights-decision = 3) [set weights wei_3]
-  if (weights-decision = 4) [set weights wei_4]
-
-  let wei 1
-  if (store > 0) [set wei (item (store - 1) weights)]
-
-  let row-values map [ i -> row-value values i ] values
-  let total reduce + row-values
-  if (total = 0) [set total 1]
-  let ans map [ i -> ( i / total ) * wei] row-values
-  ; ; show ans
-
-  report ans
-
-end
-
-to-report row-value [values n]
-
-  if (n = 0) [set n 1]
-  let total reduce * values
-  let num (total) / (n * n * n * n)
-  report sqrt( sqrt ( num ) )
-
-end
 
 to-report get-target-lane [ values other-lanes ]
 
+  ; let max-value max values
+  ; let locations position max-value values
+  ; report (item locations other-lanes)
+
   let max-value max values
-  let locations position max-value values
-  report (item locations other-lanes)
+  let indexes n-values (length values) [i -> i]
+  let ans-index filter [ i -> (item i values) = max-value ] indexes
+  report (item (one-of ans-index) other-lanes)
 
 end
 
-to-report invert-values [values]
-  let indexes n-values (number-of-lanes - 1) [i -> i]
-  let locations filter [i -> (item i values) = 0] indexes
-  if not empty? locations [
-    ; replace-item 2 [2 7 4 5] 15
-    foreach locations [x -> show replace-item x values 1]
-
-  ]
-  report map [i -> 1 / i ] values
-
-end
 
 to-report lanes-for-deci-1 [other-lanes]
-  report map [ y -> abs (y - ycor) + 1 ] other-lanes
+  report map [ y -> abs (y - ycor) ] other-lanes
 end
 
 to-report lanes-for-deci-2 [other-lanes]
   report map [ y-tar ->  count turtles with [ycor = y-tar] + 1] other-lanes
 end
 
-; thinking ends here
+; function to report the nth root of a number
+to-report nth-root [A N]
+
+  set N precision N 3
+  let xPre random 10
+  let eps 0.001
+  let delX 9007199254740992
+  let xK 0
+
+  while [ delX > eps ] [
+
+    let powers n-values (N - 1) [xPre]
+    let pow-X reduce * powers
+    if (pow-X = 0) [set pow-X 1]
+    set xK ( (N - 1) * xPre + (A / pow-X) ) / N;
+    set delX abs (xK - xPre)
+    set xPre xK
+
+  ]
+
+  report xK
+
+end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 225
@@ -853,6 +887,39 @@ weights-decision
 1
 NIL
 HORIZONTAL
+
+MONITOR
+665
+510
+810
+555
+xcor
+[xcor] of selected-car
+17
+1
+11
+
+MONITOR
+815
+510
+955
+555
+old-xcor
+[old-xcor] of selected-car
+17
+1
+11
+
+INPUTBOX
+478
+556
+625
+616
+max-distance
+33750.0
+1
+0
+Number
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1386,7 +1453,7 @@ NetLogo 6.2.0
       <value value="0.03"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="testing_all_runs" repetitions="5" runMetricsEveryStep="true">
+  <experiment name="testing_all_runs" repetitions="15" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <exitCondition>number-of-lanes-changed</exitCondition>
@@ -1410,8 +1477,30 @@ NetLogo 6.2.0
     <enumeratedValueSet variable="deceleration">
       <value value="0.03"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="weights-decision">
+  </experiment>
+  <experiment name="testing_all_runs_1" repetitions="15" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>number-of-lanes-changed</exitCondition>
+    <metric>[detector] of selected-car</metric>
+    <enumeratedValueSet variable="decision">
+      <value value="1"/>
+      <value value="2"/>
+      <value value="3"/>
       <value value="4"/>
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.006"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-patience">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="40"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.03"/>
     </enumeratedValueSet>
   </experiment>
 </experiments>

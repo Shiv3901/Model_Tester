@@ -20,7 +20,7 @@ class Analyse:
         self.cols = self.data.shape[1] - 1
         
         # get a dictionary of all the characteristics avaiables (basically they are all variables)
-        self.characteristics = self.get_characteristics()
+#         self.characteristics = self.get_characteristics()
         
         # get the formatted version that could be used to plot the data
         self.lane_data_temp = self.get_all_lanes_data()
