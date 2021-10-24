@@ -61,7 +61,8 @@ to setup
 
   ; set criteria-matrix matrix:from-row-list [ [1 2 1 2.67] [0.5 1 0.5 1.33] [1 2 1 1.67] [0.375 0.75 0.375 1] ]
 
-  set weights matrix:from-column-list [[0.328 0.209 0.125 0.338]]
+  ; set weights matrix:from-column-list [[0.328 0.209 0.125 0.338]]
+  set weights matrix:from-column-list [[20 30 10 40]]
 
 end
 
@@ -793,10 +794,10 @@ NIL
 HORIZONTAL
 
 MONITOR
-1263
-66
-1321
-111
+1260
+65
+1320
+110
 Turns
 [counter] of selected-car
 17
@@ -804,45 +805,12 @@ Turns
 11
 
 MONITOR
-1263
+1260
 10
-1325
-55
-Turned 
-[recorded] of selected-car
-17
-1
-11
-
-MONITOR
-1263
-121
-1410
-166
-NIL
-[xcor] of selected-car
-17
-1
-11
-
-MONITOR
-1339
-10
-1401
+1345
 55
 Distance
 [traveled] of selected-car
-17
-1
-11
-
-MONITOR
-1340
-67
-1397
-112
-NIL
-ticks
 17
 1
 11
@@ -856,67 +824,19 @@ decision
 decision
 1
 5
-5.0
+1.0
 1
 1
 NIL
 HORIZONTAL
-
-MONITOR
-1355
-319
-1413
-364
-NIL
-trial
-17
-1
-11
-
-SLIDER
-20
-440
-192
-473
-weights-decision
-weights-decision
-1
-4
-4.0
-1
-1
-NIL
-HORIZONTAL
-
-MONITOR
-665
-510
-810
-555
-xcor
-[xcor] of selected-car
-17
-1
-11
-
-MONITOR
-815
-510
-955
-555
-old-xcor
-[old-xcor] of selected-car
-17
-1
-11
 
 INPUTBOX
-478
-556
-625
-616
+10
+430
+157
+490
 max-distance
-33750.0
+10000.0
 1
 0
 Number
@@ -1478,7 +1398,7 @@ NetLogo 6.2.0
       <value value="0.03"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="testing_all_runs_1" repetitions="15" runMetricsEveryStep="true">
+  <experiment name="testing_all_runs_1" repetitions="3" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <exitCondition>number-of-lanes-changed</exitCondition>
