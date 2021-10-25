@@ -1,5 +1,5 @@
-; implement a python file to calculate the eigen vector for the weights of the criteria matrix
-; modify the third decision to update after every 1000 m and see if it improves and run it again
+; implement a python file to calculate the eigen vector for the weights of the criteria matrix  -> done
+; modify the third decision to update after every 1000 m and see if it improves and run it again -> done
 ; get tables and graph for standard deviation and mean (Have a look at the stats course that you are using right now)
 ; try to implement a AHP model on top of AHP model as a fifth decision and see if it improves
 
@@ -69,7 +69,7 @@ to setup
   ; set criteria-matrix matrix:from-row-list [ [1 2 1 2.67] [0.5 1 0.5 1.33] [1 2 1 1.67] [0.375 0.75 0.375 1] ]
 
   ; set weights matrix:from-column-list [[0.328 0.209 0.125 0.338]]
-  set weights matrix:from-column-list [[20 30 10 40]]
+  set weights matrix:from-column-list [[0.1390799628192016 0.36607904957750015 0.2981522179300376 0.19668876967326068]]
 
 end
 
@@ -277,10 +277,10 @@ to-report utility [values deci_number]
 
   if (deci_number = 3) [
 
-    let max-value max values
+    set values map [i -> i mod max-distance] values
 
-    ifelse (max-value > max-distance) [ set max-distance max-distance * 1.5] [ set max-distance 10000 ]
-
+    ; let max-value max values
+    ; ifelse (max-value > max-distance) [set max-distance max-distance * 1.5] [set max-distance 5000]
 
     report map [ x -> (100 / max-distance) * x ] values
   ]
@@ -432,7 +432,7 @@ end
 to-report number-of-lanes-changed
   ; if ticks > 100000 [ report true ]
   set temp [counter] of selected-car
-  if temp > 200 [ report true ]
+  if temp > 1000 [ report true ]
   report false
 end
 
@@ -830,7 +830,7 @@ decision
 decision
 1
 5
-1.0
+5.0
 1
 1
 NIL
@@ -842,7 +842,7 @@ INPUTBOX
 157
 490
 max-distance
-10000.0
+1000.0
 1
 0
 Number
@@ -1404,7 +1404,32 @@ NetLogo 6.2.0
       <value value="0.03"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="testing_all_runs_1" repetitions="3" runMetricsEveryStep="true">
+  <experiment name="testing_all_runs_1" repetitions="10" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go</go>
+    <exitCondition>number-of-lanes-changed</exitCondition>
+    <metric>[detector] of selected-car</metric>
+    <enumeratedValueSet variable="decision">
+      <value value="1"/>
+      <value value="2"/>
+      <value value="3"/>
+      <value value="4"/>
+      <value value="5"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.006"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="max-patience">
+      <value value="30"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="number-of-cars">
+      <value value="40"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.03"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="testing_all_runs_2" repetitions="1" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <exitCondition>number-of-lanes-changed</exitCondition>
