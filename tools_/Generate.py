@@ -7,10 +7,10 @@ class Generate:
         self.analyse_obj_array = [ Analyse.Analyse(direc + "/" + path, number_of_decisions) for path in paths ]
         
     # function to call all other functions to plot various plots
-    def generate_all_plots(self, variable, title, width, interval):
+    def generate_all_plots(self, variable, title, width, interval, titles):
         self.generate_line_plot(variable, title)
         self.generate_bar_plot(variable, title, width)
-        self.generate_moving_avg_plot(variable, title, interval)
+        self.generate_moving_avg_plot(variable, title, interval, titles)
     
     # call method of Analyse class to plot a line plot for all the datasets
     def generate_line_plot(self, variable, title):
@@ -30,10 +30,10 @@ class Generate:
         
 
     # call method of Analyse class to plot a moving average plot for all the datasets
-    def generate_moving_avg_plot(self, variable, title, interval):
+    def generate_moving_avg_plot(self, variable, title, interval, titles):
     
         for idx, obj in enumerate(self.analyse_obj_array):
-            obj.get_moving_average_plot(variable, "Run " + str(idx+1) + ": " + title, interval)
+            obj.get_moving_average_plot(variable, "Run " + str(idx+1) + ": " + title, interval, titles)
             
         return
     

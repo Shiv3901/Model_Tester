@@ -1,6 +1,6 @@
 ; implement a python file to calculate the eigen vector for the weights of the criteria matrix
 ; modify the third decision to update after every 1000 m and see if it improves and run it again
-; get tables and graph for standard deviation and mean (Have a look at the stats course that you are using right now)
+; get tables and graph for standard deviation and mean (Have a look att)
 ; try to implement a AHP model on top of AHP model as a fifth decision and see if it improves
 
 

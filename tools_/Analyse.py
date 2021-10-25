@@ -267,9 +267,11 @@ class Analyse:
         return values
     
     # function to return a moving average plot
-    def get_moving_average_plot(self, variable, title, interval):
+    def get_moving_average_plot(self, variable, title, interval, titles):
         
         data = self.get_data_for_moving_avg()
+        
+        
         decisions = self.get_line_titles()
         
         dicty = {}
@@ -284,9 +286,14 @@ class Analyse:
             
         plotdata = pd.DataFrame(dicty)
         
+        if len(titles) == 0:
+            titles_final = [str(i+1) for i in range(self.no_of_decisions)]
+        else:
+            titles_final = titles
+        
         for i in range(self.no_of_decisions):
             
-            plotdata["0"+str(i+1)] = plotdata.iloc[:, i].rolling(window=interval).mean()
+            plotdata[titles_final[i]] = plotdata.iloc[:, i].rolling(window=interval).mean()
             
         for i in range(self.no_of_decisions):
             del plotdata[i+1]
