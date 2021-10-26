@@ -16,7 +16,7 @@ globals [
   criteria-matrix  ; matrix to store the criteria weights
 
   weights   ; weights to be considered for all decisions
-
+  weights_1
   ; for testing purposes I am putting in more weights
 
   ;
@@ -43,6 +43,7 @@ turtles-own [
   wei_2
   wei_3
   wei_4
+  wei_5
 
   changing-lanes        ; variable to make sure that only valid lane-changes are calculated
   distance-in-lanes     ; array that stores the distance covered in that lane
@@ -69,7 +70,27 @@ to setup
   ; set criteria-matrix matrix:from-row-list [ [1 2 1 2.67] [0.5 1 0.5 1.33] [1 2 1 1.67] [0.375 0.75 0.375 1] ]
 
   ; set weights matrix:from-column-list [[0.328 0.209 0.125 0.338]]
-  set weights matrix:from-column-list [[0.1390799628192016 0.36607904957750015 0.2981522179300376 0.19668876967326068]]
+
+  let w1 matrix:from-column-list [[0.32827917357805086 0.20922535696722167 0.12440614157220208 0.3380893278825253]]
+  ; let w2 matrix:from-column-list [[0.5613706682483522 0.19075872062266924 0.03167076172463574 0.21619984940434275]]
+  let w2 matrix:from-column-list [[0.5988294027819328 0.1357388289014986 0.029733752411590642 0.23569801590497796]]
+  let w3 matrix:from-column-list [[0.1911614519661486 0.3432022576028015 0.04146200946784538 0.42417428096320453]]
+  let w4 matrix:from-column-list [[0.08598715750326057 0.619832770553512 0.04835413209973482 0.24582593984349255]]
+  let w5 matrix:from-column-list [[0.10141486730972857 0.389768076543781 0.2676104926029182 0.24120656354357217]]
+  let w6 matrix:from-column-list [[0.1390799628192016 0.36607904957750015 0.2981522179300376 0.19668876967326068]]
+  ;let w7 matrix:from-column-list []
+  ;let w8 matrix:from-column-list []
+  ;let w9 matrix:from-column-list []
+
+  if (weights-array = 1) [set weights w1]
+  if (weights-array = 2) [set weights w2]
+  if (weights-array = 3) [set weights w3]
+  if (weights-array = 4) [set weights w4]
+  if (weights-array = 5) [set weights w5]
+
+  ; set weights_1 matrix:from-column-list [[0.11841291753536427 0.1946414498372274 0.07189354046696332 0.20616886412389773 0.4088832280365472]]
+  set weights_1 matrix:from-column-list [[0.42332946093808743 0.10344322858031973 0.02468882225135456 0.10344322858031973 0.34509525964991855]]
+
 
 end
 
@@ -292,7 +313,10 @@ to-report utility [values deci_number]
     ] [
       report n-values (length values) [100]
     ]
+  ]
 
+  if (deci_number = 5) [
+    report map [i -> i * 100] values
   ]
 
 end
@@ -316,6 +340,7 @@ to choose-new-lane ; turtle procedure
     set wei_2 utility (lanes-for-deci-2 other-lanes) 2
     set wei_3 utility (lanes-for-deci-3 other-lanes) 3
     set wei_4 utility (lanes-for-deci-4 other-lanes) 4
+    set wei_5 utility (convert-to-list cal) 5
 
     ; changes to a lane that is nearest to the current one
     if (decision = 1) [
@@ -343,6 +368,11 @@ to choose-new-lane ; turtle procedure
 
     ]
 
+    if (decision = 6) [
+      let values convert-to-list cal-w5
+      set target-lane get-target-lane values other-lanes
+    ]
+
     ;]
 
     set patience max-patience
@@ -353,13 +383,34 @@ to choose-new-lane ; turtle procedure
 
 end
 
+to-report cal-w5
+
+  let wei_final matrix:make-constant (length wei_1) 5 0
+
+  matrix:set-column wei_final 0 wei_1
+  matrix:set-column wei_final 1 wei_2
+  matrix:set-column wei_final 2 wei_3
+  matrix:set-column wei_final 3 wei_4
+  matrix:set-column wei_final 4 wei_5
+
+  report matrix:times wei_final weights_1
+
+end
+
 to-report convert-to-list [final]
+
+  let rows item 0 (matrix:dimensions final)
 
   let x1 matrix:get final 0 0
   let x2 matrix:get final 1 0
   let x3 matrix:get final 2 0
 
-  report (list x1 x2 x3)
+  ifelse (rows = 3) [
+    report (list x1 x2 x3)
+  ] [
+    let x4 matrix:get final 3 0
+    report (list x1 x2 x3 x4)
+  ]
 
 end
 
@@ -375,6 +426,7 @@ to-report cal
   report matrix:times wei_final weights
 
 end
+
 
 to-report lanes-for-deci-4 [other-lanes]
   let current-xcor xcor
@@ -432,7 +484,7 @@ end
 to-report number-of-lanes-changed
   ; if ticks > 100000 [ report true ]
   set temp [counter] of selected-car
-  if temp > 1000 [ report true ]
+  if temp > 200 [ report true ]
   report false
 end
 
@@ -627,7 +679,7 @@ number-of-cars
 number-of-cars
 1
 number-of-lanes * world-width
-40.0
+60.0
 1
 1
 NIL
@@ -829,8 +881,8 @@ SLIDER
 decision
 decision
 1
-5
-5.0
+6
+6.0
 1
 1
 NIL
@@ -842,10 +894,25 @@ INPUTBOX
 157
 490
 max-distance
-1000.0
+5000.0
 1
 0
 Number
+
+SLIDER
+10
+495
+182
+528
+weights-array
+weights-array
+1
+10
+2.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1429,7 +1496,7 @@ NetLogo 6.2.0
       <value value="0.03"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="testing_all_runs_2" repetitions="1" runMetricsEveryStep="true">
+  <experiment name="testing_all_runs_2" repetitions="10" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <exitCondition>number-of-lanes-changed</exitCondition>
@@ -1440,6 +1507,10 @@ NetLogo 6.2.0
       <value value="3"/>
       <value value="4"/>
       <value value="5"/>
+      <value value="6"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="weights-array">
+      <value value="2"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="acceleration">
       <value value="0.006"/>
@@ -1448,7 +1519,7 @@ NetLogo 6.2.0
       <value value="30"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="number-of-cars">
-      <value value="40"/>
+      <value value="60"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="deceleration">
       <value value="0.03"/>
