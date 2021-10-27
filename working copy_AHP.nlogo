@@ -1,99 +1,70 @@
-; implement a python file to calculate the eigen vector for the weights of the criteria matrix  -> done
-; modify the third decision to update after every 1000 m and see if it improves and run it again -> done
-; get tables and graph for standard deviation and mean (Have a look at the stats course that you are using right now)
-; try to implement a AHP model on top of AHP model as a fifth decision and see if it improves
-
-
-
+; matrix extension added for AHP model
 extensions [ matrix ]
 
+; global variable used in the entire code
 globals [
+
   selected-car   ; the currently selected car
   lanes          ; a list of the y coordinates of different lanes
   broken-car     ; the currently selected broken-car
-  temp           ; the variable to count the number of lane-changes
 
-  criteria-matrix  ; matrix to store the criteria weights
+  weights-AHP       ; weights or priority or eigen vector matrix for the AHP model
+  weights-adv-AHP   ; weights for the advanced AHP model
 
-  weights   ; weights to be considered for all decisions
-  weights_1
-  ; for testing purposes I am putting in more weights
-
-  ;
-
-  ; variables to store the weights for all decisions for AHP model
-  deci_1_we ; decision_1_weights
-  deci_2_we ; decision_2_weights
-  deci_3_we ; decision_3_weights
-  deci_4_we ; decision_4_weights
-  ; end
 ]
 
+; define variables fokr all turtles objects
 turtles-own [
+
   speed         ; the current speed of the car
   top-speed     ; the maximum speed of the car (different for all cars)
   target-lane   ; the desired lane of the car
   patience      ; the driver's current level of patience
 
-  counter       ; keeps the counter for lane change
-  traveled      ; total distance travelled by the car
-  recorded
+  lane-change-counter       ; keeps the counter for lane change
+  temp-traveled             ; temp distance buffer to make sure to not calculate the dist it travelled during the lane change
+  dist-before-lane-change   ; record the distance travelled between
+  dist-travelled            ; record the distance after every lane change
 
-  wei_1
-  wei_2
-  wei_3
-  wei_4
-  wei_5
+
+  ; variables to store the weights for all decisions for AHP model
+  wei_1    ; store the weights for decision 1
+  wei_2    ; store the weights for decision 2
+  wei_3    ; store the weights for decision 3
+  wei_4    ; store the weights for decision 4
+  wei_5    ; store the weights for decision 5
 
   changing-lanes        ; variable to make sure that only valid lane-changes are calculated
   distance-in-lanes     ; array that stores the distance covered in that lane
 
-  old-xcor      ; variable to keep track of the distance travelled
-  old-ycor      ; variable to keep track of the last road that the car drove on
+  old-xcor      ; variable to keep the last seen x-cor
+  old-ycor      ; variable to keep the last seen y-cor (YOU MIGHT NOT NEED THIS TO BE HONEST)
 
-  detector      ; variable to run analysis that makes sure that the variable is correctly recorded
 ]
 
+; code that sets up the entire testing environment
 to setup
+
   clear-all
   set-default-shape turtles "car"
   draw-road
   create-or-remove-cars
   set selected-car one-of turtles
   set broken-car one-of turtles        ; randomly select a car and break it down to mimic traffic
-  ask selected-car [ set color red ]
-  ask broken-car [set color gray ]
-  reset-ticks
+  ask selected-car [ set color red ]   ; set the color of the selected car to red
+  ask broken-car [set color gray ]     ; set the color of the broken car to gray
+  reset-ticks   ; reset the ticks for new run
 
-  ; code to initialise the criterion matrix to make AHP work
+  ; initialise the weights of the normal AHP model by calling the req function
+  set weights-AHP get-weights-for-AHP-model weights-array-index
 
-  ; set criteria-matrix matrix:from-row-list [ [1 2 1 2.67] [0.5 1 0.5 1.33] [1 2 1 1.67] [0.375 0.75 0.375 1] ]
-
-  ; set weights matrix:from-column-list [[0.328 0.209 0.125 0.338]]
-
-  let w1 matrix:from-column-list [[0.32827917357805086 0.20922535696722167 0.12440614157220208 0.3380893278825253]]
-  ; let w2 matrix:from-column-list [[0.5613706682483522 0.19075872062266924 0.03167076172463574 0.21619984940434275]]
-  let w2 matrix:from-column-list [[0.5988294027819328 0.1357388289014986 0.029733752411590642 0.23569801590497796]]
-  let w3 matrix:from-column-list [[0.1911614519661486 0.3432022576028015 0.04146200946784538 0.42417428096320453]]
-  let w4 matrix:from-column-list [[0.08598715750326057 0.619832770553512 0.04835413209973482 0.24582593984349255]]
-  let w5 matrix:from-column-list [[0.10141486730972857 0.389768076543781 0.2676104926029182 0.24120656354357217]]
-  let w6 matrix:from-column-list [[0.1390799628192016 0.36607904957750015 0.2981522179300376 0.19668876967326068]]
-  ;let w7 matrix:from-column-list []
-  ;let w8 matrix:from-column-list []
-  ;let w9 matrix:from-column-list []
-
-  if (weights-array = 1) [set weights w1]
-  if (weights-array = 2) [set weights w2]
-  if (weights-array = 3) [set weights w3]
-  if (weights-array = 4) [set weights w4]
-  if (weights-array = 5) [set weights w5]
-
-  ; set weights_1 matrix:from-column-list [[0.11841291753536427 0.1946414498372274 0.07189354046696332 0.20616886412389773 0.4088832280365472]]
-  set weights_1 matrix:from-column-list [[0.42332946093808743 0.10344322858031973 0.02468882225135456 0.10344322858031973 0.34509525964991855]]
-
+  ; initialise the weights of the advanced AHP model
+  ; set weights-adv-AHP matrix:from-column-list [[0.11841291753536427 0.1946414498372274 0.07189354046696332 0.20616886412389773 0.4088832280365472]]
+  set weights-adv-AHP matrix:from-column-list [[0.42332946093808743 0.10344322858031973 0.02468882225135456 0.10344322858031973 0.34509525964991855]]
 
 end
 
+; function to make sure that there are valid cars only in the environment
 to create-or-remove-cars
 
   ; make sure we don't have too many cars for the room we have on the road
@@ -107,16 +78,16 @@ to create-or-remove-cars
     set color car-color
     move-to one-of free road-patches
     set target-lane pycor
-    set distance-in-lanes n-values number-of-lanes [1]
-    set heading 90
+    set distance-in-lanes n-values number-of-lanes [1]   ; initialise an array to 1s
+    set heading 90 ; pointing towards the right
     set top-speed 0.5 + random-float 0.5
     set speed 0.5
-    set counter 0
+    set lane-change-counter 0   ; initialuse the counter to 0
     set old-xcor xcor
     set old-ycor pycor
     set patience random max-patience
-    set detector 0
-    set changing-lanes false
+    set dist-travelled 0
+    set changing-lanes false  ; car is not changing lane when it starts
   ]
 
   if count turtles > number-of-cars [
@@ -126,13 +97,395 @@ to create-or-remove-cars
 
 end
 
+; function called at every tick
+to go
+
+  create-or-remove-cars
+
+  ; move every other turtles forward
+  ask [ other turtles ] of broken-car [
+
+    move-forward  ; function to make cars go forward
+
+    ; code to calculate the distance travelled from the last time it was calculated
+    let dist 0
+    ifelse xcor >= old-xcor [ set dist xcor - old-xcor ] [ set dist old-xcor - xcor ]
+    if (xcor < -25) [
+      ifelse (dist - 50 >= 0) [set dist dist - 50] [set dist 0]
+    ]
+    set old-xcor xcor
+    set temp-traveled temp-traveled + dist  ; update the dist travelled
+
+    ; code to update the distance travelled in the corresponding lane
+    let lane-loc position ycor lanes
+    if (is-number? lane-loc) [
+      let temp-dist item lane-loc distance-in-lanes
+      set distance-in-lanes replace-item lane-loc distance-in-lanes (temp-dist + dist)
+    ]
+
+  ]
+
+  ; ask the car to break down (makes it speed equal to zero)
+  ask broken-car [
+    break-down-car
+  ]
+
+  ; change lane for a car with patience less than 0
+  ask turtles with [ patience <= 0 ] [
+    set dist-before-lane-change temp-traveled
+    choose-new-lane    ; function call that makes the decision of which lane to choose
+    set changing-lanes true    ; set it true, so it stops counting for lane-change until reached
+  ]
+
+  ; turtles moving to target lanes are instructed to call move-to-target-lane
+  ask turtles with [ ycor != target-lane and changing-lanes = true] [
+    move-to-target-lane
+  ]
+
+  ; function that counts the lane change the first time it reached the target lane
+  ask turtles with [ ycor = target-lane and changing-lanes = true] [
+    set lane-change-counter lane-change-counter + 1
+    set changing-lanes false    ; this makes sure that its only counted once
+    set old-ycor target-lane    ; useful for 4th decision
+    set dist-travelled dist-before-lane-change
+  ]
+
+  tick
+
+  ; procedure to pick a car to break down to mimic traffic
+  let HARDCODED 90
+  if ticks mod HARDCODED = 0 [
+    ask broken-car [ set color car-color ]
+    ask selected-car [ set color red ]
+    set broken-car one-of turtles
+    ask broken-car [ set color gray ]
+    ask broken-car [ break-down-car ]
+  ]
+
+end
+
+; NOT MY CODE STARTS HERE (I did comment it though)
+
+; function to make all the turtles move forward
+to move-forward ; turtle procedure
+
+  set heading 90
+  speed-up-car ; we tentatively speed up, but might have to slow down
+  let blocking-cars other turtles in-cone (1 + speed) 45 with [ y-distance <= 1 ] ; look at the vicinity
+  let blocking-car min-one-of blocking-cars [ distance myself ] ; get all the cars that are blocking the current car
+
+  ; if there is a car blocking your way
+  if blocking-car != nobody [
+    ; match the speed of the car ahead of you and then slow
+    ; down so you are driving a bit slower than that car.
+    set speed [ speed ] of blocking-car
+
+    if blocking-car = broken-car [ set speed 0 ]
+    if speed > 0 [ slow-down-car ]
+    if speed = 0 [ set patience -1 ]   ; doing this to make sure that the car choses a new lane
+
+  ]
+  forward speed ; move
+
+end
+
+; function to mimic car breakdown (could be modified in future)
+to break-down-car ; turtle procedure
+  set speed 0
+end
+
+; function to slow down the car to avoid clashes
+to slow-down-car ; turtle procedure
+  set speed (speed - deceleration)
+  if speed < 0 [ set speed deceleration ]
+  ; every time you hit the brakes, you loose a little patience
+  ifelse patience > 0 [ set patience patience - 1 ] [ set patience 0 ]
+end
+
+; function to speed up the car
+to speed-up-car ; turtle procedure
+  set speed (speed + acceleration)
+  if speed > top-speed [ set speed top-speed ]
+end
+
+; NOT MY CODE ENDS HERE
+
+;----------------------------------------------------------------------------------------------------------;
+
+; decision 1 is to choose the new lane that is the nearest to the one that you are on
+; decision 2 is to choose the lane that has the minimum number of cars on it atm
+; decision 3 is to choose the lane that you got to travel the most in other than yours
+; decision 4 could be a variation to 2 where lane is changed based on how many cars in front of you
+; decision 5 AHP model that uses the above 4 decisions
+; decision 6 Advanced AHP model that uses the above 5 decisions
+
+; function to choose the target lane for the lane that has decided to change lanes
+to choose-new-lane ; turtle procedure
+
+  ; get all the lanes other than the one that you are standing on
+  let other-lanes remove ycor lanes
+
+  ; if there are other lanes present, then make a decision
+  if not empty? other-lanes [
+
+    ; get all the weights to these following 5 weights
+    set wei_1 utility (lanes-data-for-deci-1 other-lanes) 1
+    set wei_2 utility (lanes-data-for-deci-2 other-lanes) 2
+    set wei_3 utility (lanes-data-for-deci-3 other-lanes) 3
+    set wei_4 utility (lanes-data-for-deci-4 other-lanes) 4
+    set wei_5 utility (convert-to-list cal-AHP) 5
+
+    ; make a decision based on what model you are using
+    if (decision = 1) [
+      set target-lane get-target-lane wei_1 other-lanes
+    ]
+
+    if (decision = 2) [
+      set target-lane get-target-lane wei_2 other-lanes
+    ]
+
+    if (decision = 3) [
+      set target-lane get-target-lane wei_3 other-lanes
+    ]
+
+    if (decision = 4) [
+      set target-lane get-target-lane wei_4 other-lanes
+    ]
+
+    if (decision = 5) [
+
+      let values convert-to-list cal-AHP
+      set target-lane get-target-lane values other-lanes
+
+    ]
+
+    if (decision = 6) [
+      let values convert-to-list cal-adv-AHP
+      set target-lane get-target-lane values other-lanes
+    ]
+
+    set patience max-patience
+
+    ; NOT REQUIRED RIGHT NOW
+    ;if (speed != 0) [set patience max-patience]   ; the car is now moving to a new lane with max-patience
+    ;if (speed <= 0) [set patience 0]  ; if the speed is <= 0, then wait because it could be edge case (PLEASE WRITE A BETTER EXPLAINATION)
+  ]
+
+end
+
+; code to get the data needed for specific decision making models
+
+; returns the array for decision 1
+to-report lanes-data-for-deci-1 [other-lanes]
+  report map [ y -> abs (y - ycor) ] other-lanes ; calculates the abs distance between the current and the other lanes
+end
+
+; returns the array for decision 2
+to-report lanes-data-for-deci-2 [other-lanes]
+  report map [ y-tar ->  count turtles with [ycor = y-tar] + 1] other-lanes ; calculates the number of cars on the other lanes
+end
+
+; returns the array for decision 3
+to-report lanes-data-for-deci-3 [other-lanes]
+  let temp-dist-lanes distance-in-lanes     ; make a temporary array for future modification to that
+  ; only delete the current lane if the car is standing on it
+  if (length other-lanes != number-of-lanes) [
+    let temp-idx position old-ycor lanes      ; get the index number for the lane that the car is in right now
+    set temp-dist-lanes remove-item temp-idx temp-dist-lanes    ; delete the distance travelled on the current lane before making a decision
+  ]
+  report temp-dist-lanes
+end
+
+; returns the array for decision 4
+to-report lanes-data-for-deci-4 [other-lanes]
+  let current-xcor xcor
+  let field-of-view 15   ; make the field view optimal for the decision to work
+  let left-xcor field-of-view - 50 + xcor
+  report map [ y-tar -> (count turtles with [ ycor = y-tar and (xcor < left-xcor or xcor > current-xcor) ]) + 1 ] other-lanes ; count the cars in front
+end
+
+
+;----------------------------------------------------------------------------------------------------------;
+
+; function to move the car to the target lane
+to move-to-target-lane ; turtle procedure
+  set heading ifelse-value target-lane < ycor [ 180 ] [ 0 ]
+  let blocking-cars other turtles in-cone (1 + abs (ycor - target-lane)) 180 with [ x-distance <= 1 ]
+  let blocking-car min-one-of blocking-cars [ distance myself ]
+  ifelse blocking-car = nobody [
+    forward 0.2
+    set ycor precision ycor 1 ; to avoid floating point errors
+  ] [
+    ; slow down if the car blocking us is behind, otherwise speed up
+    ifelse towards blocking-car <= 180 [ slow-down-car ] [ speed-up-car ]
+  ]
+end
+
+; function to stop the simulation if a specific number of turns are made
+to-report number-of-lanes-changed
+  if ([lane-change-counter] of selected-car) > 200 [ report true ]
+  report false
+end
+
+; report a good color after the car goes through break-down
+to-report car-color
+  ; give all cars a blueish color, but still make them distinguishable
+  report one-of [ blue cyan sky ] + 1.5 + random-float 1.0
+end
+
+; function to return the target lane decised based on the array (selects the coordinate for the lane that has the maximum utility)
+to-report get-target-lane [ values other-lanes ]
+
+  ; values: [98 23 98 3 23], other-lanes: [-5, -3, 1, 3, 5] --> return either -5 or 1
+
+  let max-value max values   ; get the maximum value present in the given values array
+  let indexes n-values (length values) [i -> i]  ; generate an array of indexes of size of values
+  let ans-index filter [ i -> (item i values) = max-value ] indexes  ; get all the indexed where the value is equal to the max
+  report (item (one-of ans-index) other-lanes)  ; pick one index randomly from the array and return the value of other-lanes at that index
+
+end
+
+; function to convert the matrix into a list for calculating the target lane
+to-report convert-to-list [final]
+
+  let rows item 0 (matrix:dimensions final)
+
+  let x1 matrix:get final 0 0
+  let x2 matrix:get final 1 0
+  let x3 matrix:get final 2 0
+
+  ifelse (rows = 3) [
+    report (list x1 x2 x3)
+  ] [
+    let x4 matrix:get final 3 0
+    report (list x1 x2 x3 x4)
+  ]
+
+end
+
+; function to get the matrix for all the weights into one matrix for AHP model
+to-report cal-AHP
+
+  let wei_final matrix:make-constant (length wei_1) 4 0
+
+  matrix:set-column wei_final 0 wei_1
+  matrix:set-column wei_final 1 wei_2
+  matrix:set-column wei_final 2 wei_3
+  matrix:set-column wei_final 3 wei_4
+
+  ; return an array that has the total values for each lane
+  report matrix:times wei_final weights-AHP
+
+end
+
+; function to get the matrix for all the weights into one matrix for the advanced AHP model
+to-report cal-adv-AHP
+
+  let wei_final matrix:make-constant (length wei_1) 5 0
+
+  matrix:set-column wei_final 0 wei_1
+  matrix:set-column wei_final 1 wei_2
+  matrix:set-column wei_final 2 wei_3
+  matrix:set-column wei_final 3 wei_4
+  matrix:set-column wei_final 4 wei_5
+
+  ; return an array that has the total values for each lane
+  report matrix:times wei_final weights-adv-AHP
+
+end
+
+; function to return the selected weights for the AHP model
+to-report get-weights-for-AHP-model [selector]
+
+  ; send the weights according to the option selected by user (selector)
+
+  if (selector = 1) [report matrix:from-column-list [[0.32827917357805086 0.20922535696722167 0.12440614157220208 0.3380893278825253]]]
+
+  ; for selector 2: matrix:from-column-list [[0.5613706682483522 0.19075872062266924 0.03167076172463574 0.21619984940434275]]
+  if (selector = 2) [report matrix:from-column-list [[0.5988294027819328 0.1357388289014986 0.029733752411590642 0.23569801590497796]]]
+
+  if (selector = 3) [report matrix:from-column-list [[0.1911614519661486 0.3432022576028015 0.04146200946784538 0.42417428096320453]]]
+  if (selector = 4) [report matrix:from-column-list [[0.08598715750326057 0.619832770553512 0.04835413209973482 0.24582593984349255]]]
+  if (selector = 5) [report matrix:from-column-list [[0.10141486730972857 0.389768076543781 0.2676104926029182 0.24120656354357217]]]
+  if (selector = 6) [report matrix:from-column-list [[0.1390799628192016 0.36607904957750015 0.2981522179300376 0.19668876967326068]]]
+
+end
+
+; function to return the array for choose-new-lane to make a decision
+; this function's sole job is to make the values in the range of 0 to 100
+to-report utility [values deci_number]
+
+  ; [2 4 6 2] -> [100 50 0 100]
+  ; to maximise the value of the nearest lane
+  if (deci_number = 1) [
+    report map [ x -> (x * -25) + 150 ] values
+  ]
+
+  ; [40 0 40] -> [0 100 0]
+  ; to maximise the value of the lane that has the minimum number of cars
+  if (deci_number = 2) [
+
+    ifelse (number-of-cars > 1) [
+      report map [ x -> ( (-100 / (number-of-cars - 1) ) * x ) + 100 ] values
+    ] [
+      report n-values (length values) [100]
+    ]
+
+  ]
+
+  ; [a 0 a] -> [100 0 100]
+  ; to maximise the value of the lane that you have travelled the most in
+  if (deci_number = 3) [
+
+    ; first way to use the decision 3
+    set values map [i -> i mod max-distance] values
+
+    ; second way to do it
+    ; let max-value max values
+    ; ifelse (max-value > max-distance) [set max-distance max-distance * 1.5] [set max-distance 5000]
+
+    report map [ x -> (100 / max-distance) * x ] values
+  ]
+
+  ; [30 0 30] -> [0 100 0]
+  ; to maximise the value of the lane that has the minimum number of cars
+  if (deci_number = 4) [
+
+    ifelse (number-of-cars > 1) [
+      report map [ x -> ( (-100 / (number-of-cars - 1) ) * x ) + 100 ] values
+    ] [
+      report n-values (length values) [100]
+    ]
+  ]
+
+  ; [0.34 0.87 0.13 0.25] -> [34 87 13 25]
+  ; convert the weights from range 0 to 100
+  if (deci_number = 5) [
+    report map [i -> i * 100] values
+  ]
+
+end
+
+to-report number-of-lanes
+  ; To make the number of lanes easily adjustable, remove this
+  ; reporter and create a slider on the interface with the same
+  ; name. 8 lanes is the maximum that currently fit in the view.
+  report 4
+end
+
+; NOT MY CODE STARTING HERE
+
+; function to report an array of free patches where cars can be created
 to-report free [ road-patches ] ; turtle procedure
+
   let this-car self
   report road-patches with [
     not any? turtles-here with [ self != this-car ]
   ]
+
 end
 
+; draw and color the roads
 to draw-road
   ask patches [
     ; the road is surrounded by green grass of varying shades
@@ -146,6 +499,7 @@ to draw-road
   draw-road-lines
 end
 
+; draw and color the road lines
 to draw-road-lines
   let y (last lanes) - 1 ; start below the "lowest" lane
   while [ y <= first lanes + 1 ] [
@@ -159,6 +513,7 @@ to draw-road-lines
   ]
 end
 
+; draw the white lines
 to draw-line [ y line-color gap ]
   ; We use a temporary turtle to draw the line:
   ; - with a gap of zero, we get a continuous line;
@@ -179,289 +534,12 @@ to draw-line [ y line-color gap ]
 end
 
 
-; every tick
-to go
-
-  create-or-remove-cars
-
-  ask [ other turtles ] of broken-car [
-
-    move-forward
-
-    ; code to calculate the distance travelled from the last time it was calculated
-    let dist 0
-    ifelse xcor >= old-xcor [ set dist xcor - old-xcor ] [ set dist old-xcor - xcor ]
-    if (xcor < -25) [
-      ifelse (dist - 50 >= 0) [set dist dist - 50] [set dist 0]
-    ]
-    set old-xcor xcor
-    set traveled traveled + dist
-
-    ; code to update the distance travelled in the corresponding lane
-    let lane-loc position ycor lanes
-    if (is-number? lane-loc) [
-      let temp-dist item lane-loc distance-in-lanes
-      set distance-in-lanes replace-item lane-loc distance-in-lanes (temp-dist + dist)
-    ]
-
-  ]
-
-  ask broken-car [
-    break-down-car
-  ]
-
-  ; change lane for a car with patience less than 0
-  ask turtles with [ patience <= 0 ] [
-    set recorded traveled
-    choose-new-lane
-    set changing-lanes true    ; set it true, so it stops counting for lane-change until reached
-  ]
-
-  ; turtles moving to target lanes are instructed to call move-to-target-lane
-  ask turtles with [ ycor != target-lane and changing-lanes = true] [
-    move-to-target-lane
-  ]
-
-  ; function that counts the lane change the first time it reached the target lane
-  ask turtles with [ ycor = target-lane and changing-lanes = true] [
-    set counter counter + 1
-    set changing-lanes false    ; this makes sure that its only counted once
-    set old-ycor target-lane    ; useful for 4th decision
-    set detector recorded
-  ]
-
-  tick
-
-  ; procedure to pick a car to break down to mimic traffic
-  if ticks mod 90 = 0 [
-    ask broken-car [ set color car-color ]
-    ask selected-car [ set color red ]
-    set broken-car one-of turtles
-    ask broken-car [ set color gray ]
-    ask broken-car [ break-down-car ]
-  ]
-
-end
-
-to move-forward ; turtle procedure
-  set heading 90
-  speed-up-car ; we tentatively speed up, but might have to slow down
-  let blocking-cars other turtles in-cone (1 + speed) 45 with [ y-distance <= 1 ]
-  let blocking-car min-one-of blocking-cars [ distance myself ]
-
-  ; if there is a car blocking your way
-  if blocking-car != nobody [
-    ; match the speed of the car ahead of you and then slow
-    ; down so you are driving a bit slower than that car.
-    set speed [ speed ] of blocking-car
-
-    if blocking-car = broken-car [ set speed 0 ]
-    if speed > 0 [ slow-down-car ]
-    if speed = 0 [ set patience -1 ]   ; doing this to make sure that the car choses a new lane
-
-  ]
-
-  forward speed
-end
-
-to break-down-car ; turtle procedure
-  set speed 0
-end
-
-to slow-down-car ; turtle procedure
-  set speed (speed - deceleration)
-  if speed < 0 [ set speed deceleration ]
-  ; every time you hit the brakes, you loose a little patience
-  ifelse patience > 0 [ set patience patience - 1 ] [ set patience 0 ]
-end
-
-to speed-up-car ; turtle procedure
-  set speed (speed + acceleration)
-  if speed > top-speed [ set speed top-speed ]
-end
-
-to-report utility [values deci_number]
-
-  if (deci_number = 1) [
-    report map [ x -> (x * -25) + 150 ] values
-  ]
-
-  if (deci_number = 2) [
-
-    ifelse (number-of-cars > 1) [
-      report map [ x -> ( (-100 / (number-of-cars - 1) ) * x ) + 100 ] values
-    ] [
-      report n-values (length values) [100]
-    ]
-
-  ]
-
-  if (deci_number = 3) [
-
-    set values map [i -> i mod max-distance] values
-
-    ; let max-value max values
-    ; ifelse (max-value > max-distance) [set max-distance max-distance * 1.5] [set max-distance 5000]
-
-    report map [ x -> (100 / max-distance) * x ] values
-  ]
-
-  if (deci_number = 4) [
-
-    ifelse (number-of-cars > 1) [
-      report map [ x -> ( (-100 / (number-of-cars - 1) ) * x ) + 100 ] values
-    ] [
-      report n-values (length values) [100]
-    ]
-  ]
-
-  if (deci_number = 5) [
-    report map [i -> i * 100] values
-  ]
-
-end
-
-; decision 1 is to choose the new lane that is the nearest to the one that you are on
-; decision 2 is to choose the lane that has the minimum number of cars on it atm
-; decision 3 is to choose the lane that you got to travel the most in other than yours
-; decision 4 could be a variation to 2 where lane is changed based on how many cars in front of you
-; decision 5 could be a ML model which makes the prediction of which lane to pick to travel
-;            as far as possible without having to change lanes again
-to choose-new-lane ; turtle procedure
-
-  ; get all the lanes other than the one that you are standing on
-  let other-lanes remove ycor lanes
-
-
-
-  if not empty? other-lanes [
-
-    set wei_1 utility (lanes-for-deci-1 other-lanes) 1
-    set wei_2 utility (lanes-for-deci-2 other-lanes) 2
-    set wei_3 utility (lanes-for-deci-3 other-lanes) 3
-    set wei_4 utility (lanes-for-deci-4 other-lanes) 4
-    set wei_5 utility (convert-to-list cal) 5
-
-    ; changes to a lane that is nearest to the current one
-    if (decision = 1) [
-      set target-lane get-target-lane wei_1 other-lanes
-    ]
-
-    ; changes to a lane that has the minimum number of cars in it at that time
-    if (decision = 2) [
-      set target-lane get-target-lane wei_2 other-lanes
-    ]
-
-    ; changes to a lane where the car has travelled the most in
-    if (decision = 3) [
-      set target-lane get-target-lane wei_3 other-lanes
-    ]
-
-    if (decision = 4) [
-      set target-lane get-target-lane wei_4 other-lanes
-    ]
-
-    if (decision = 5) [
-
-      let values convert-to-list cal
-      set target-lane get-target-lane values other-lanes
-
-    ]
-
-    if (decision = 6) [
-      let values convert-to-list cal-w5
-      set target-lane get-target-lane values other-lanes
-    ]
-
-    ;]
-
-    set patience max-patience
-
-    ;if (speed != 0) [set patience max-patience]   ; the car is now moving to a new lane with max-patience
-    ;if (speed <= 0) [set patience 0]  ; if the speed is <= 0, then wait because it could be edge case (PLEASE WRITE A BETTER EXPLAINATION)
-  ]
-
-end
-
-to-report cal-w5
-
-  let wei_final matrix:make-constant (length wei_1) 5 0
-
-  matrix:set-column wei_final 0 wei_1
-  matrix:set-column wei_final 1 wei_2
-  matrix:set-column wei_final 2 wei_3
-  matrix:set-column wei_final 3 wei_4
-  matrix:set-column wei_final 4 wei_5
-
-  report matrix:times wei_final weights_1
-
-end
-
-to-report convert-to-list [final]
-
-  let rows item 0 (matrix:dimensions final)
-
-  let x1 matrix:get final 0 0
-  let x2 matrix:get final 1 0
-  let x3 matrix:get final 2 0
-
-  ifelse (rows = 3) [
-    report (list x1 x2 x3)
-  ] [
-    let x4 matrix:get final 3 0
-    report (list x1 x2 x3 x4)
-  ]
-
-end
-
-to-report cal
-
-  let wei_final matrix:make-constant (length wei_1) 4 0
-
-  matrix:set-column wei_final 0 wei_1
-  matrix:set-column wei_final 1 wei_2
-  matrix:set-column wei_final 2 wei_3
-  matrix:set-column wei_final 3 wei_4
-
-  report matrix:times wei_final weights
-
-end
-
-
-to-report lanes-for-deci-4 [other-lanes]
-  let current-xcor xcor
-  let field-of-view 15
-  let left-xcor field-of-view - 50 + xcor
-  report map [ y-tar -> (count turtles with [ ycor = y-tar and (xcor < left-xcor or xcor > current-xcor) ]) + 1 ] other-lanes
-end
-
-to-report lanes-for-deci-3 [other-lanes]
-  let temp-dist-lanes distance-in-lanes     ; make a temporary array for future modification to that
-  ; only delete the current lane if the car is standing on it
-  if (length other-lanes != number-of-lanes) [
-    let temp-idx position old-ycor lanes      ; get the index number for the lane that the car is in right now
-    set temp-dist-lanes remove-item temp-idx temp-dist-lanes    ; delete the distance travelled on the current lane before making a decision
-  ]
-  report temp-dist-lanes
-end
-
-to move-to-target-lane ; turtle procedure
-  set heading ifelse-value target-lane < ycor [ 180 ] [ 0 ]
-  let blocking-cars other turtles in-cone (1 + abs (ycor - target-lane)) 180 with [ x-distance <= 1 ]
-  let blocking-car min-one-of blocking-cars [ distance myself ]
-  ifelse blocking-car = nobody [
-    forward 0.2
-    set ycor precision ycor 1 ; to avoid floating point errors
-  ] [
-    ; slow down if the car blocking us is behind, otherwise speed up
-    ifelse towards blocking-car <= 180 [ slow-down-car ] [ speed-up-car ]
-  ]
-end
-
+; function to report the x-distance covered by the car
 to-report x-distance
   report distancexy [ xcor ] of myself ycor
 end
 
+; function to report the y-distance covered by the car
 to-report y-distance
   report distancexy xcor [ ycor ] of myself
 end
@@ -480,65 +558,7 @@ to select-car
   ]
 end
 
-; function to stop the simulation if a specific number of turns are made
-to-report number-of-lanes-changed
-  ; if ticks > 100000 [ report true ]
-  set temp [counter] of selected-car
-  if temp > 200 [ report true ]
-  report false
-end
-
-; make that that after the break down, all the cars still have random colors for genralisation
-to-report car-color
-  ; give all cars a blueish color, but still make them distinguishable
-  report one-of [ blue cyan sky ] + 1.5 + random-float 1.0
-end
-
-to-report number-of-lanes
-  ; To make the number of lanes easily adjustable, remove this
-  ; reporter and create a slider on the interface with the same
-  ; name. 8 lanes is the maximum that currently fit in the view.
-  report 4
-end
-
-to-report trial
-  report [ item 1 distance-in-lanes ] of selected-car
-end
-
-; Copyright 1998 Uri Wilensky.
-; See Info tab for full copyright and license.
-
-; function to report the nth root in netlogos
-
-; thinking starts here
-
-; What I want right now is a simple way to get the weights one and for all
-; one way to do it is to make 4 seperate function and pass the values as required
-
-; to-report
-
-
-to-report get-target-lane [ values other-lanes ]
-
-  ; let max-value max values
-  ; let locations position max-value values
-  ; report (item locations other-lanes)
-
-  let max-value max values
-  let indexes n-values (length values) [i -> i]
-  let ans-index filter [ i -> (item i values) = max-value ] indexes
-  report (item (one-of ans-index) other-lanes)
-
-end
-
-
-to-report lanes-for-deci-1 [other-lanes]
-  report map [ y -> abs (y - ycor) ] other-lanes
-end
-
-to-report lanes-for-deci-2 [other-lanes]
-  report map [ y-tar ->  count turtles with [ycor = y-tar] + 1] other-lanes
-end
+; NOT MY CODE ENDING HERE
 
 ; function to report the nth root of a number
 to-report nth-root [A N]
@@ -563,6 +583,11 @@ to-report nth-root [A N]
   report xK
 
 end
+
+
+; Copyright 1998 Uri Wilensky.
+; See Info tab for full copyright and license.
+
 @#$#@#$#@
 GRAPHICS-WINDOW
 225
@@ -679,7 +704,7 @@ number-of-cars
 number-of-cars
 1
 number-of-lanes * world-width
-60.0
+50.0
 1
 1
 NIL
@@ -857,7 +882,7 @@ MONITOR
 1320
 110
 Turns
-[counter] of selected-car
+[lane-change-counter] of selected-car
 17
 1
 11
@@ -868,7 +893,7 @@ MONITOR
 1345
 55
 Distance
-[traveled] of selected-car
+[dist-before-lane-change] of selected-car
 17
 1
 11
@@ -904,8 +929,8 @@ SLIDER
 495
 182
 528
-weights-array
-weights-array
+weights-array-index
+weights-array-index
 1
 10
 2.0
@@ -1519,7 +1544,7 @@ NetLogo 6.2.0
       <value value="30"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="number-of-cars">
-      <value value="60"/>
+      <value value="80"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="deceleration">
       <value value="0.03"/>
