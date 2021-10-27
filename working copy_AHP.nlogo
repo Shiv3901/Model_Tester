@@ -59,8 +59,13 @@ to setup
   set weights-AHP get-weights-for-AHP-model weights-array-index
 
   ; initialise the weights of the advanced AHP model
-  ; set weights-adv-AHP matrix:from-column-list [[0.11841291753536427 0.1946414498372274 0.07189354046696332 0.20616886412389773 0.4088832280365472]]
-  set weights-adv-AHP matrix:from-column-list [[0.42332946093808743 0.10344322858031973 0.02468882225135456 0.10344322858031973 0.34509525964991855]]
+  ; for decision 40 cars:  [[0.11841291753536427 0.1946414498372274 0.07189354046696332 0.20616886412389773 0.4088832280365472]]
+
+  set weights-adv-AHP matrix:from-column-list [[0.10373226134753757 0.272551128383146 0.07861435350302447 0.272551128383146 0.272551128383146]]
+
+  ; for decision 50 & 60 cars: [0.42332946093808743 0.10344322858031973 0.02468882225135456 0.10344322858031973 0.34509525964991855]
+  ; for decision 70 cars: [0.24116085155351485 0.05786370580189927 0.042512648209143994 0.10695728056691386 0.5515055138685281]
+  ; for decision 80 cars: [0.17590004816360166 0.10705408736426217 0.02243271499129954 0.16822245077444833 0.5263906987063882]
 
 end
 
@@ -402,7 +407,10 @@ to-report get-weights-for-AHP-model [selector]
   if (selector = 1) [report matrix:from-column-list [[0.32827917357805086 0.20922535696722167 0.12440614157220208 0.3380893278825253]]]
 
   ; for selector 2: matrix:from-column-list [[0.5613706682483522 0.19075872062266924 0.03167076172463574 0.21619984940434275]]
-  if (selector = 2) [report matrix:from-column-list [[0.5988294027819328 0.1357388289014986 0.029733752411590642 0.23569801590497796]]]
+  ; for 50 & 60 cars: [0.5988294027819328 0.1357388289014986 0.029733752411590642 0.23569801590497796]
+  ; for 70 cars: [0.653341953824055 0.10971470533766983 0.07462850381894146 0.16231483701933375]
+  ; for 80 cars: [0.37202845862487494 0.22120944499009834 0.03473363776015184 0.37202845862487494]
+  if (selector = 2) [report matrix:from-column-list [[0.14753825870272758 0.3740682190420592 0.10432530321315382 0.3740682190420592]]]
 
   if (selector = 3) [report matrix:from-column-list [[0.1911614519661486 0.3432022576028015 0.04146200946784538 0.42417428096320453]]]
   if (selector = 4) [report matrix:from-column-list [[0.08598715750326057 0.619832770553512 0.04835413209973482 0.24582593984349255]]]
@@ -438,11 +446,11 @@ to-report utility [values deci_number]
   if (deci_number = 3) [
 
     ; first way to use the decision 3
-    set values map [i -> i mod max-distance] values
+    ; set values map [i -> i mod max-distance] values
 
     ; second way to do it
-    ; let max-value max values
-    ; ifelse (max-value > max-distance) [set max-distance max-distance * 1.5] [set max-distance 5000]
+    let max-value max values
+    if (max-value > max-distance) [set max-distance max-distance * 1.5]
 
     report map [ x -> (100 / max-distance) * x ] values
   ]
@@ -587,7 +595,6 @@ end
 
 ; Copyright 1998 Uri Wilensky.
 ; See Info tab for full copyright and license.
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 225
@@ -704,7 +711,7 @@ number-of-cars
 number-of-cars
 1
 number-of-lanes * world-width
-50.0
+30.0
 1
 1
 NIL
@@ -919,7 +926,7 @@ INPUTBOX
 157
 490
 max-distance
-5000.0
+25312.5
 1
 0
 Number
@@ -1525,7 +1532,7 @@ NetLogo 6.2.0
     <setup>setup</setup>
     <go>go</go>
     <exitCondition>number-of-lanes-changed</exitCondition>
-    <metric>[detector] of selected-car</metric>
+    <metric>[dist-travelled] of selected-car</metric>
     <enumeratedValueSet variable="decision">
       <value value="1"/>
       <value value="2"/>
@@ -1534,7 +1541,7 @@ NetLogo 6.2.0
       <value value="5"/>
       <value value="6"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="weights-array">
+    <enumeratedValueSet variable="weights-array-index">
       <value value="2"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="acceleration">
@@ -1544,7 +1551,7 @@ NetLogo 6.2.0
       <value value="30"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="number-of-cars">
-      <value value="80"/>
+      <value value="30"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="deceleration">
       <value value="0.03"/>
