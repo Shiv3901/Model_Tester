@@ -926,7 +926,7 @@ INPUTBOX
 157
 490
 max-distance
-25312.5
+5000.0
 1
 0
 Number

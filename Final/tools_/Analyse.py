@@ -182,7 +182,7 @@ class Analyse:
         plt.title(title_for_plot, fontsize=fs+2)
         plt.xlabel("Distance Covered", fontsize=fs)
         plt.ylabel("No. of Lane Changes", fontsize=fs)
-        plt.savefig(title_for_plot + ".png")
+        plt.savefig("images/Line Plot --> " + title_for_plot + ".png")
         plt.legend()
         plt.show()
         
@@ -271,6 +271,9 @@ class Analyse:
         plt.title(title_for_plot, fontsize=fs+2)
         plt.xlabel("Intervals", fontsize=fs)
         plt.ylabel("Moving Average", fontsize=fs)
+        plt.savefig("images/Bar Plot --> " + title_for_plot + ".png")
+        plt.legend()
+        plt.show()
         
         # return the plot in case the user wants to do something with it
         return plotdata
@@ -337,6 +340,7 @@ class Analyse:
         plt.title(title_for_plot, fontsize=fs+2)
         plt.xlabel("No. of Lane Changes", fontsize=fs)
         plt.ylabel("Moving Avg", fontsize=fs)
+        plt.savefig("images/Moving Avg Plot --> " + title_for_plot + ".png")
         
         # return the plot in case the user wants to do something with it
         return plotdata
