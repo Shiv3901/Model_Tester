@@ -693,9 +693,9 @@ NIL
 
 MONITOR
 130
-335
+336
 215
-380
+381
 mean speed
 mean [speed] of turtles
 2
@@ -711,7 +711,7 @@ number-of-cars
 number-of-cars
 1
 number-of-lanes * world-width
-30.0
+50.0
 1
 1
 NIL
@@ -791,9 +791,9 @@ PENS
 
 BUTTON
 10
-225
+226
 215
-258
+259
 follow selected car
 follow selected-car
 NIL
@@ -825,9 +825,9 @@ NIL
 
 BUTTON
 10
-295
+296
 215
-328
+329
 reset perspective
 reset-perspective
 NIL
@@ -842,9 +842,9 @@ NIL
 
 MONITOR
 10
-335
+336
 130
-380
+381
 selected car speed
 [ speed ] of selected-car
 2
@@ -914,7 +914,7 @@ decision
 decision
 1
 6
-6.0
+2.0
 1
 1
 NIL
@@ -926,16 +926,16 @@ INPUTBOX
 157
 490
 max-distance
-5000.0
+7500.0
 1
 0
 Number
 
 SLIDER
 10
-495
+496
 182
-528
+529
 weights-array-index
 weights-array-index
 1
@@ -1528,7 +1528,7 @@ NetLogo 6.2.0
       <value value="0.03"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="testing_all_runs_2" repetitions="10" runMetricsEveryStep="true">
+  <experiment name="testing_all_runs_80_cars" repetitions="10" runMetricsEveryStep="true">
     <setup>setup</setup>
     <go>go</go>
     <exitCondition>number-of-lanes-changed</exitCondition>
@@ -1541,9 +1541,6 @@ NetLogo 6.2.0
       <value value="5"/>
       <value value="6"/>
     </enumeratedValueSet>
-    <enumeratedValueSet variable="weights-array-index">
-      <value value="2"/>
-    </enumeratedValueSet>
     <enumeratedValueSet variable="acceleration">
       <value value="0.006"/>
     </enumeratedValueSet>
@@ -1551,7 +1548,7 @@ NetLogo 6.2.0
       <value value="30"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="number-of-cars">
-      <value value="30"/>
+      <value value="80"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="deceleration">
       <value value="0.03"/>

@@ -339,7 +339,7 @@ class Analyse:
         fs = 18 # font size
         plt.title(title_for_plot, fontsize=fs+2)
         plt.xlabel("No. of Lane Changes", fontsize=fs)
-        plt.ylabel("Moving Avg", fontsize=fs)
+        plt.ylabel("Distance Travelled (units)", fontsize=fs)
         plt.savefig("images/Moving Avg Plot --> " + title_for_plot + ".png")
         
         # return the plot in case the user wants to do something with it
